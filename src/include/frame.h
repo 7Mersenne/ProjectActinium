@@ -17,6 +17,7 @@ public:
 protected:
     int m_iModID;
     class CActConfig *m_pConfig;
+    class CActNode *m_pNode;
 };
 
 

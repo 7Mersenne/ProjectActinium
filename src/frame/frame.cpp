@@ -1,6 +1,8 @@
 #include <stdio.h>
+#include <dlfcn.h>
 #include "../include/frame.h"
 #include "../include/debug.h"
+#include "../include/node.h"
 
 CActFrame::CActFrame()
 {
@@ -30,5 +32,11 @@ int CActFrame::InitFrame()
         m_pConfig->LoadConfigs();
     }
     else return -1;
+
+    void *pdlHandle = dlopen("../libs/node_in.so", RTLD_LAZY);
+    void (*GetNode)() = dlsym(pdlHandle, "ActNewNode");
+    m_pNode = (class CActNode *)GetNode();
+    m_pNode->PrintMe();
+
     return 0;
 }

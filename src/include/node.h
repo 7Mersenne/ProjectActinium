@@ -3,6 +3,9 @@
 
 #define NODEID_MAXLEN 128
 
+#define NODE_MODNAME "ActNode"
+
+
 typedef struct tag_ActNodeInfo
 {
     char strID[NODEID_MAXLEN];
@@ -19,6 +22,7 @@ public:
     CActNode();
 
     int GetInfo(ACTNODEINFO &sINfo);
+    virtual int PrintMe()=0;
 
 protected:
     int m_iModID;
@@ -26,6 +30,7 @@ protected:
     
 };
 
+class CActNode *ActNewNode();
 
 
 #endif
