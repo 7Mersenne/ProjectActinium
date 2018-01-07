@@ -1,6 +1,6 @@
 #ifndef ACTINIUM_FRAME_H_44d22393_e378_4a45_a1eb_584ae67e41ea
 #define ACTINIUM_FRAME_H_44d22393_e378_4a45_a1eb_584ae67e41ea
-
+extern "C"{
 #include "config.h"
 
 #define FRAME_MODNAME "ActFrame"
@@ -25,5 +25,5 @@ protected:
 
 
 
-
+}
 #endif

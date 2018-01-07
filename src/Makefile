@@ -65,7 +65,7 @@ MY_LIBS   =
 CPPFLAGS  = -Wall
 
 # The options used in linking as well as in any direct use of ld.
-LDFLAGS   =
+LDFLAGS   = -ldl
 
 # The directories in which source files reside.
 # If not specified, only the current directory will be serached.
@@ -91,7 +91,7 @@ HDREXTS = .h .H .hh .hpp .HPP .h++ .hxx .hp
 # The pre-processor and compiler options.
 # Users can override those variables from the command line.
 CFLAGS  = -g -O2
-CXXFLAGS= -g -O2
+CXXFLAGS= -g -O2 -fpermissive
 
 # The C program compiler.
 #CC     = gcc
@@ -140,7 +140,7 @@ DEPEND.d    = $(subst -g ,,$(DEPEND))
 COMPILE.c   = $(CC)  $(MY_CFLAGS) $(CFLAGS)   $(CPPFLAGS) -c
 COMPILE.cxx = $(CXX) $(MY_CFLAGS) $(CXXFLAGS) $(CPPFLAGS) -c
 LINK.c      = $(CC)  $(MY_CFLAGS) $(CFLAGS)   $(CPPFLAGS) $(LDFLAGS)
-LINK.cxx    = $(CXX) $(MY_CFLAGS) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS)
+LINK.cxx    = $(CXX) $(MY_CFLAGS) $(CXXFLAGS) $(CPPFLAGS)
 
 .PHONY: all objs tags ctags clean distclean help show
 
@@ -227,7 +227,7 @@ ifeq ($(SRC_CXX),)              # C program
 	$(LINK.c)   $(OBJS) $(MY_LIBS) -o $@
 	@echo Type ./$@ to execute the program.
 else                            # C++ program
-	$(LINK.cxx) $(OBJS) $(MY_LIBS) -o $@
+	$(LINK.cxx) $(OBJS) $(MY_LIBS) -o $@ $(LDFLAGS)
 	@echo Type ./$@ to execute the program.
 endif
 

@@ -1,8 +1,10 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
 #include "../include/debug.h"
+#include "../include/config.h"
 
 CActDebug::CActDebug()
 {
@@ -22,6 +24,25 @@ int CActDebug::Init()
     strcpy(m_strModName[0], DEBUG_MODNAME);
     memset(m_iModLevel, 0, sizeof(m_iModLevel));
     memset(m_iModMask, 0, sizeof(m_iModMask));
+    return 0;
+}
+
+int CActDebug::Reconfig()
+{
+    char strTemp[CONFIGITEM_DATALEN];
+
+    memset(strTemp, 0 , sizeof(strTemp));
+    if(g_cConfig.GetConfigItem("AllLevel", "Debug", strTemp) == 0)
+    {
+        m_iAllLevel = atoi(strTemp);
+    }
+    memset(strTemp, 0 , sizeof(strTemp));
+    if(g_cConfig.GetConfigItem("AllMask", "Debug", strTemp) == 0)
+    {
+        memset(m_iModMask, atoi(strTemp), sizeof(m_iModMask));
+    }
+
+    return 0;
 }
 
 int CActDebug::AddModule(char *strModuleName)
@@ -127,7 +148,7 @@ int CActDebug::Debug(int iMod, char *strMessage)
     struct timespec tp;
     clock_gettime(CLOCK_MONOTONIC, &tp);
 
-    sprintf(strPush, "%d:%d [DEBUG] (%s) %s", tp.tv_sec, tp.tv_nsec, m_strModName[iMod], strMessage);
+    sprintf(strPush, "%ld:%06ld [DEBUG] (%s) %s", tp.tv_sec, tp.tv_nsec/1000, m_strModName[iMod], strMessage);
     PushMessage(strPush);
 
     return 0;
@@ -166,7 +187,7 @@ int CActDebug::Info(int iMod, char *strMessage)
     struct timespec tp;
     clock_gettime(CLOCK_MONOTONIC, &tp);
 
-    sprintf(strPush, "%d:%d [INFO] (%s) %s", tp.tv_sec, tp.tv_nsec, m_strModName[iMod], strMessage);
+    sprintf(strPush, "%ld:%06ld [INFO] (%s) %s", tp.tv_sec, tp.tv_nsec/1000, m_strModName[iMod], strMessage);
     PushMessage(strPush);
 
     return 0;
@@ -205,7 +226,7 @@ int CActDebug::Warning(int iMod, char *strMessage)
     struct timespec tp;
     clock_gettime(CLOCK_MONOTONIC, &tp);
 
-    sprintf(strPush, "%d:%d [WARNING] (%s) %s", tp.tv_sec, tp.tv_nsec, m_strModName[iMod], strMessage);
+    sprintf(strPush, "%ld:%06ld [WARNING] (%s) %s", tp.tv_sec, tp.tv_nsec/1000, m_strModName[iMod], strMessage);
     PushMessage(strPush);
 
     return 0;
@@ -244,7 +265,7 @@ int CActDebug::Error(int iMod, char *strMessage)
     struct timespec tp;
     clock_gettime(CLOCK_MONOTONIC, &tp);
 
-    sprintf(strPush, "%d:%d [ERROR] (%s) %s", tp.tv_sec, tp.tv_nsec, m_strModName[iMod], strMessage);
+    sprintf(strPush, "%ld:%06ld [ERROR] (%s) %s", tp.tv_sec, tp.tv_nsec/1000, m_strModName[iMod], strMessage);
     PushMessage(strPush);
 
     return 0;
@@ -283,7 +304,7 @@ int CActDebug::Fatal(int iMod, char *strMessage)
     struct timespec tp;
     clock_gettime(CLOCK_MONOTONIC, &tp);
 
-    sprintf(strPush, "%d:%d [FATAL] (%s) %s", tp.tv_sec, tp.tv_nsec, m_strModName[iMod], strMessage);
+    sprintf(strPush, "%ld:%06ld [FATAL] (%s) %s", tp.tv_sec, tp.tv_nsec/1000, m_strModName[iMod], strMessage);
     PushMessage(strPush);
 
     return 0;
@@ -383,6 +404,6 @@ int CActDebug::PushMessage(char *strMessage)
     {
         printf("\033[40;35m%s\033[0m\n", strMessage);
     }
-    else printf(strMessage);
+    else printf("%s\n", strMessage);
     return 0;
 }

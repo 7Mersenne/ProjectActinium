@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
-
+extern "C"{
 #define DEBUG_MODNAME "ActDebug"
 
 #define ACTDBG_LEVEL_ZERO 0
@@ -31,6 +31,7 @@ public:
     ~CActDebug();
 
     int Init();
+    int Reconfig();
     int AddModule(char *strModuleName);
     int GetModID(char *strModuleName);
     int Debug(int iMod, char *strMessage);
@@ -63,5 +64,5 @@ class CActDebug g_cDebug;
 extern class CActDebug g_cDebug;
 #endif
 
-
+}
 #endif

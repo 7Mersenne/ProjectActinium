@@ -1,6 +1,6 @@
 #ifndef ACTINIUM_NODE_H_fa781fcc_31cc_462a_a676_34be11aa73d7
 #define ACTINIUM_NODE_H_fa781fcc_31cc_462a_a676_34be11aa73d7
-
+extern "C"{
 #define NODEID_MAXLEN 128
 
 #define NODE_MODNAME "ActNode"
@@ -29,8 +29,8 @@ protected:
     ACTNODEINFO m_sInfo;
     
 };
-
 class CActNode *ActNewNode();
+}
 
 
 #endif

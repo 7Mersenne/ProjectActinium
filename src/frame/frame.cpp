@@ -27,16 +27,24 @@ int CActFrame::InitFrame()
     ACTDBG_ERROR("InitFrame: error.");
     ACTDBG_FATAL("InitFrame: fatal.");
 
-    if(m_pConfig)
-    {
-        m_pConfig->LoadConfigs();
-    }
-    else return -1;
 
-    void *pdlHandle = dlopen("../libs/node_in.so", RTLD_LAZY);
-    void (*GetNode)() = dlsym(pdlHandle, "ActNewNode");
-    m_pNode = (class CActNode *)GetNode();
-    m_pNode->PrintMe();
+    char *error;
+//    class CActNode *(*GetNode)();
+    int (*GetNode)();
+
+    void *pdlHandle = dlopen("libs/libnode_in.so", RTLD_LAZY);
+    if((error = dlerror())!=NULL)
+    {
+        ACTDBG_ERROR("dlopen fail: %s", error)
+    }
+    GetNode = dlsym(pdlHandle, "ActNewNode");
+    if((error = dlerror())!=NULL)
+    {
+        ACTDBG_ERROR("ActNewNode fail: %s", error)
+    }
+    GetNode();
+//    m_pNode = (*GetNode)();
+//    m_pNode->PrintMe();
 
     return 0;
 }
