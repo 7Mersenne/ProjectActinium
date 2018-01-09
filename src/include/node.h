@@ -16,6 +16,9 @@ typedef struct tag_ActNodeInfo
     int iOutput;
 }ACTNODEINFO, *PACTNODEINFO;
 
+typedef class CActNode *(ActNodeCreater)();
+typedef int (ActNodeRemover)(class CActNode *pNode);
+
 class CActNode
 {
 public:
@@ -29,7 +32,6 @@ protected:
     ACTNODEINFO m_sInfo;
     
 };
-class CActNode *ActNewNode();
 }
 
 

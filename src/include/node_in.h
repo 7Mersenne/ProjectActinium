@@ -13,6 +13,9 @@ public:
 
 };
 
+class CActNode *ActNewNode();
+
+int ActDeleteNode(class CActNode *pNode);
 
 }
 #endif

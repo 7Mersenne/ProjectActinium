@@ -386,7 +386,7 @@ int CActDebug::PushMessage(char *strMessage)
 {
     if(strstr(strMessage, "[DEBUG]"))
     {
-        printf("\033[40;34m%s\033[0m\n", strMessage);
+        printf("\033[40;32m%s\033[0m\n", strMessage);
     }
     else if(strstr(strMessage, "[INFO]"))
     {

@@ -72,7 +72,8 @@ LDFLAGS   = -ldl
 SRCDIRS   = . ./frame 
 
 # The directories in which so lib source files reside.
-LIBDIRS   = 
+LIBSRCDIRS   = ./nodes
+LIBDIR    =  ./libs
 
 # The executable file name.
 # If not specified, current directory name or `a.out' will be used.
@@ -90,8 +91,9 @@ HDREXTS = .h .H .hh .hpp .HPP .h++ .hxx .hp
 
 # The pre-processor and compiler options.
 # Users can override those variables from the command line.
-CFLAGS  = -g -O2
-CXXFLAGS= -g -O2 -fpermissive
+CFLAGS    = -g -O2 -rdynamic
+CXXFLAGS  = -g -O2 -rdynamic
+LIBFLAGS = -g -O2 -shared -fPIC
 
 # The C program compiler.
 #CC     = gcc
@@ -128,19 +130,22 @@ ifeq ($(SRCDIRS),)
 endif
 SOURCES = $(foreach d,$(SRCDIRS),$(wildcard $(addprefix $(d)/*,$(SRCEXTS))))
 HEADERS = $(foreach d,$(SRCDIRS),$(wildcard $(addprefix $(d)/*,$(HDREXTS))))
+LIBSOURCES = $(foreach d,$(LIBSRCDIRS),$(wildcard $(addprefix $(d)/*,$(SRCEXTS))))
 SRC_CXX = $(filter-out %.c,$(SOURCES))
 OBJS    = $(addsuffix .o, $(basename $(SOURCES)))
 DEPS    = $(OBJS:.o=.d)
+LIBS    = $(addsuffix .so, $(basename $(LIBSOURCES)))
 
 ## Define some useful variables.
 DEP_OPT = $(shell if `$(CC) --version | grep "GCC" >/dev/null`; then \
                   echo "-MM -MP"; else echo "-M"; fi )
 DEPEND      = $(CC)  $(DEP_OPT)  $(MY_CFLAGS) $(CFLAGS) $(CPPFLAGS)
 DEPEND.d    = $(subst -g ,,$(DEPEND))
-COMPILE.c   = $(CC)  $(MY_CFLAGS) $(CFLAGS)   $(CPPFLAGS) -c
-COMPILE.cxx = $(CXX) $(MY_CFLAGS) $(CXXFLAGS) $(CPPFLAGS) -c
-LINK.c      = $(CC)  $(MY_CFLAGS) $(CFLAGS)   $(CPPFLAGS) $(LDFLAGS)
-LINK.cxx    = $(CXX) $(MY_CFLAGS) $(CXXFLAGS) $(CPPFLAGS)
+COMPILE.c   = $(CC)  $(MY_CFLAGS) $(CFLAGS)    $(CPPFLAGS) -c
+COMPILE.cxx = $(CXX) $(MY_CFLAGS) $(CXXFLAGS)  $(CPPFLAGS) -c
+LINK.c      = $(CC)  $(MY_CFLAGS) $(CFLAGS)    $(CPPFLAGS)
+LINK.cxx    = $(CXX) $(MY_CFLAGS) $(CXXFLAGS)  $(CPPFLAGS)
+MKLIB       = $(CXX) $(MY_CFLAGS) $(LIBFLAGS)  $(CPPFLAGS)
 
 .PHONY: all objs tags ctags clean distclean help show
 
@@ -148,6 +153,7 @@ LINK.cxx    = $(CXX) $(MY_CFLAGS) $(CXXFLAGS) $(CPPFLAGS)
 .SUFFIXES:
 
 all: $(PROGRAM)
+	mv $(LIBS) $(LIBDIR)
 
 # Rules for creating dependency files (.d).
 #------------------------------------------
@@ -184,9 +190,10 @@ all: $(PROGRAM)
 	@echo -n $(dir $<) > $@
 	@$(DEPEND.d) $< >> $@
 
-# Rules for generating object files (.o).
+# Rules for generating object files (.o) and library files (.so).
 #----------------------------------------
 objs:$(OBJS)
+libs:$(LIBS)
 
 %.o:%.c
 	$(COMPILE.c) $< -o $@
@@ -212,6 +219,18 @@ objs:$(OBJS)
 %.o:%.cxx
 	$(COMPILE.cxx) $< -o $@
 
+%.so:%.cpp
+	$(MKLIB) $< -o $@
+
+%.so:%.CPP
+	$(MKLIB) $< -o $@
+
+%.so:%.c
+	$(MKLIB) $< -o $@
+
+%.so:%.C
+	$(MKLIB) $< -o $@
+
 # Rules for generating the tags.
 #-------------------------------------
 tags: $(HEADERS) $(SOURCES)
@@ -222,7 +241,7 @@ ctags: $(HEADERS) $(SOURCES)
 
 # Rules for generating the executable.
 #-------------------------------------
-$(PROGRAM):$(OBJS)
+$(PROGRAM):$(OBJS) $(LIBS)
 ifeq ($(SRC_CXX),)              # C program
 	$(LINK.c)   $(OBJS) $(MY_LIBS) -o $@
 	@echo Type ./$@ to execute the program.
@@ -238,8 +257,8 @@ endif
 endif
 
 clean:
-	$(RM) $(OBJS) $(PROGRAM) $(PROGRAM).exe
-
+	$(RM) $(OBJS) $(PROGRAM) $(PROGRAM).exe 
+	$(RM) $(LIBDIR)/*
 distclean: clean
 	$(RM) $(DEPS) TAGS
 
