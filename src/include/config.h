@@ -23,6 +23,7 @@ class CActConfig
 public:
     CActConfig();
 
+    int Init();
     int LoadConfigs();
     int StoreConfigs();
     int ClearConfigs();

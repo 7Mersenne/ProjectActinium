@@ -1,23 +1,21 @@
 #include <stdio.h>
 #include <dlfcn.h>
+#include <unistd.h>
 #include "../include/frame.h"
 #include "../include/debug.h"
 #include "../include/node.h"
 
 CActFrame::CActFrame()
 {
-    m_pConfig = NULL;
+    m_iState = ACTFRM_STATE_IDLE;
 }
 
 CActFrame::~CActFrame()
 {
-    if(m_pConfig) delete m_pConfig;
 }
 
 int CActFrame::InitFrame()
 {
-    m_pConfig = new CActConfig;
-
     m_iModID = g_cDebug.AddModule(FRAME_MODNAME);
 
     ACTDBG_INFO("InitFrame: Test messages.");
@@ -56,4 +54,68 @@ int CActFrame::InitFrame()
     (*DelNode)(m_pNode);
 
     return 0;
+}
+
+int CActFrame::Run()
+{
+    int i;
+    if(m_iState == ACTFRM_STATE_RUN)
+    {
+        ACTDBG_WARNING("Run: Frame is running, do nothing.")
+        return 0;
+    }
+    if(m_iState == ACTFRM_STATE_PAUSE)
+    {
+        ACTDBG_WARNING("Run: Frame is pause, stop and restart.")
+        Stop();
+    }
+    m_iState = ACTFRM_STATE_RUN;
+    if(pthread_create(&m_MainThread, NULL, ThreadFunc, this))
+    {
+        ACTDBG_FATAL("Create MainThread fail, exit!")
+        m_iState = ACTFRM_STATE_IDLE;
+        return -1;
+    }
+    ACTDBG_DEBUG("Frame counter start.")
+    for(i=0; i<10; i++)
+    {
+        ACTDBG_DEBUG("Main counter: %d", i)
+        sleep(1);
+    }
+    ACTDBG_DEBUG("Frame counter stop.")
+}
+
+int CActFrame::Pause(int iGo)
+{
+    if(iGo)
+        m_iState = ACTFRM_STATE_RUN;
+    else
+        m_iState = ACTFRM_STATE_PAUSE;
+    return 0;
+}
+
+int CActFrame::Stop()
+{
+    m_iState = ACTFRM_STATE_IDLE;
+    return 0;
+}
+
+
+void *CActFrame::ThreadFunc(void *arg)
+{
+    class CActFrame *pThis = (class CActFrame *)arg;
+    pThis->MainThread();
+    return NULL;
+}
+
+void *CActFrame::MainThread()
+{
+    ACTDBG_DEBUG("MainTread counter start.")
+    for(int i=0; i<3; i++)
+    {
+        ACTDBG_DEBUG("Tread counter: %d", i)
+        sleep(2);
+    }
+    ACTDBG_DEBUG("MainTread counter stop.")
+   return NULL;
 }

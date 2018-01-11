@@ -9,7 +9,7 @@
 CActDebug::CActDebug()
 {
     m_iAllLevel = 0;
-    m_iModCnt = 1;
+    m_iModCnt = 0;
     m_iModID = 0;
 }
 
@@ -24,6 +24,8 @@ int CActDebug::Init()
     strcpy(m_strModName[0], DEBUG_MODNAME);
     memset(m_iModLevel, 0, sizeof(m_iModLevel));
     memset(m_iModMask, 0, sizeof(m_iModMask));
+    m_iModCnt = 1;
+    m_iAllLevel = 5;
     return 0;
 }
 

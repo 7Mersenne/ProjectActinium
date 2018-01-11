@@ -6,13 +6,19 @@
 
 CActConfig::CActConfig()
 {
-    m_iModID = g_cDebug.AddModule(CONFIG_MODNAME);
     m_iState = 0;
     m_iItemsCnt = 0;
     m_iGroupCnt = 0;
     memset(m_piGroupCnt, 0, sizeof(m_piGroupCnt));
     memset(m_ConfigArray, 0, sizeof(m_ConfigArray));
 }
+
+int CActConfig::Init()
+{
+    m_iModID = g_cDebug.AddModule(CONFIG_MODNAME);
+    return 0;
+}
+
 
 int CActConfig::LoadConfigs()
 {
