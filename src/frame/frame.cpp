@@ -27,7 +27,6 @@ int CActFrame::InitFrame()
 
 
     char *error;
-//    int (*GetNode)();
     ActNodeCreater *GetNode;
     ActNodeRemover *DelNode;
 
@@ -53,6 +52,22 @@ int CActFrame::InitFrame()
     m_pNode->PrintMe();
     (*DelNode)(m_pNode);
 
+    ACTDBG_DEBUG("InitFrame: init console.")
+    m_Console.Init();
+    CMDITEM cmd;
+    sprintf(cmd.strName, "%s", ACTFRM_CMD_EXIT_NAME);
+    sprintf(cmd.strUsage, "%s", ACTFRM_CMD_EXIT_USAGE);
+    cmd.iParamCnt = 0;
+    cmd.pFunc = &OnCmdExit;
+    cmd.pContext = this;
+    m_Console.AddCmd(&cmd);
+
+    return 0;
+}
+
+int CActFrame::UninitFrame()
+{
+    m_Console.Stop();
     return 0;
 }
 
@@ -70,7 +85,7 @@ int CActFrame::Run()
         Stop();
     }
     m_iState = ACTFRM_STATE_RUN;
-    if(pthread_create(&m_MainThread, NULL, ThreadFunc, this))
+/*    if(pthread_create(&m_MainThread, NULL, ThreadFunc, this))
     {
         ACTDBG_FATAL("Create MainThread fail, exit!")
         m_iState = ACTFRM_STATE_IDLE;
@@ -83,6 +98,14 @@ int CActFrame::Run()
         sleep(1);
     }
     ACTDBG_DEBUG("Frame counter stop.")
+*/
+
+    while(m_iState != ACTFRM_STATE_IDLE)
+    {
+//        ACTDBG_DEBUG("Run: <%d>", m_iState)
+        sleep(1);
+    }
+    return 0;
 }
 
 int CActFrame::Pause(int iGo)
@@ -96,7 +119,9 @@ int CActFrame::Pause(int iGo)
 
 int CActFrame::Stop()
 {
+    ACTDBG_INFO("Stop: stop frame.")
     m_iState = ACTFRM_STATE_IDLE;
+
     return 0;
 }
 
@@ -118,4 +143,15 @@ void *CActFrame::MainThread()
     }
     ACTDBG_DEBUG("MainTread counter stop.")
    return NULL;
+}
+
+
+int CActFrame::OnCmdExit(PCOMMAND pCmd, char *strRet, void *pContext)
+{
+    CActFrame *pThis = (CActFrame *)pContext;
+
+    sprintf(strRet, "Main frame exit.");
+    pThis->Stop();
+    pThis->UninitFrame();
+    return 0;
 }

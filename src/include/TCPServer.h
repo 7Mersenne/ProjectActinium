@@ -28,11 +28,10 @@ public:
     void *ListenThread();
 
     virtual int ProcessData(int iConn, unsigned char *pBuf, int iLen);
+    virtual int OnConnected(int iConn);
     int Send(int iConn, unsigned char *pBuf, int iLen);
 
 protected:
-    int m_iModID;
-
     int m_iPort;
     int m_iSocketFd;
     int m_iConn;
@@ -42,6 +41,8 @@ protected:
 
     pthread_t m_ListenThread;
 
+private:
+    int m_iModID;
 
 };
 

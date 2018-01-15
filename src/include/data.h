@@ -31,8 +31,9 @@ public:
     int GetData();
 
 protected:
-    int m_iModID;
     ACTDATAINFO m_sInfo;
+private:
+    int m_iModID;
 };
 
 

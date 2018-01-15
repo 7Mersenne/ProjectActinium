@@ -47,7 +47,6 @@ public:
     int SetModLevel(int iMod, int iLevel);
 
 protected: 
-    int m_iModID;
     int m_iAllLevel;
     int m_iModCnt;
     char m_strModName[ACTDBG_MAXMOD][ACTDBG_MAXMODNAME];
@@ -56,6 +55,8 @@ protected:
 
 protected:
     int PushMessage(char *strMessage);
+private:
+    int m_iModID;
 };
 
 #ifdef ACT_MAIN

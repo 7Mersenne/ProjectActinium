@@ -36,12 +36,13 @@ public:
     int GetGroupCount(PCONFIGITEM pItem);
 
 protected:
-    int m_iModID;
     int m_iState;
     int m_iItemsCnt;
     int m_iGroupCnt;
     int m_piGroupCnt[CONFIGITEM_MAXGROUP];
     CONFIGITEM m_ConfigArray[CONFIGITEM_MAXGROUP][CONFIGITEM_MAXITEM];
+private:
+    int m_iModID;
 
 };
 

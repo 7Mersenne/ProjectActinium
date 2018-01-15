@@ -3,6 +3,8 @@
 extern "C"{
 #include "../include/node.h"
 
+#define NODEIN_MODNAME "Nodein"
+
 class CActNodeIn:public CActNode
 {
 public:
@@ -11,6 +13,8 @@ public:
 
     int PrintMe();
 
+private:
+    int m_iModID;
 };
 
 class CActNode *ActNewNode();

@@ -3,8 +3,11 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include "../include/TCPServer.h"
+
+extern int errno;
 
 CTCPServer::CTCPServer()
 {
@@ -85,6 +88,12 @@ void *CTCPServer::ListenThread()
     int i, j, iRv;
     m_iState = 1;
 
+    int iSockOptVal = 1;
+    if (setsockopt(m_iSocketFd, SOL_SOCKET, SO_REUSEADDR, &iSockOptVal, sizeof(iSockOptVal)) == -1) 
+    {
+        ACTDBG_ERROR("ListenThread: SetSockOpt fail <%s>.", strerror(errno))
+        return NULL;
+    }
     struct sockaddr_in sa;
     memset(&sa, 0, sizeof(sa));
     sa.sin_family = AF_INET;
@@ -93,13 +102,13 @@ void *CTCPServer::ListenThread()
 
     if(bind(m_iSocketFd, (struct sockaddr *)&sa, sizeof(sa)) == -1)
     {
-        ACTDBG_ERROR("ListenThread: Binding fail.")
+        ACTDBG_ERROR("ListenThread: Binding fail <%s>.", strerror(errno))
         return NULL;
     }
 
     if(listen(m_iSocketFd, ACTTCPSVR_MAXCONN+2) == -1)
     {
-        ACTDBG_ERROR("ListenThread: Listen fail.")
+        ACTDBG_ERROR("ListenThread: Listen fail <%s>.", strerror(errno))
         return NULL;
     }
 
@@ -134,23 +143,26 @@ void *CTCPServer::ListenThread()
         iRv = select(iFdMax+1, &fsRead, NULL, NULL, &tvTimeOut);
         if(iRv == -1)
         {
-            ACTDBG_ERROR("ListenThread: Select Error<%d>.", iRv)
-            continue;
+            ACTDBG_ERROR("ListenThread: Select Error<%s>.", strerror(errno));
+            m_iState = 0;
+            return NULL;
         }
         if(FD_ISSET(m_iSocketFd, &fsRead))
         {
             int fd = accept(m_iSocketFd, 0, 0);
             if(fd == -1)
             {
-                ACTDBG_ERROR("ListenThread: Accept Error<%d>.", fd)
+                ACTDBG_ERROR("ListenThread: Accept Error<%s>.", strerror(errno))
                 continue;
             }
             for(j=0; j<ACTTCPSVR_MAXCONN; j++)
             {
                 if(m_piConnFd[j] == -1)
                 {
-                    ACTDBG_INFO("ListenThread: New Connection<%d>.", fd);
+                    ACTDBG_INFO("ListenThread: New Connection<%d>.", j);
                     m_piConnFd[j] = fd;
+                    OnConnected(j);
+                    break;
                 }
             }
             if(j == ACTTCPSVR_MAXCONN)
@@ -166,6 +178,7 @@ void *CTCPServer::ListenThread()
             if(!FD_ISSET(m_piConnFd[j], &fsRead)) continue;
             unsigned char pucBuf[ACTTCPSVR_MAXDATALEN] = {0};
             iRv = recv(m_piConnFd[j], pucBuf, sizeof(pucBuf), 0);
+            ACTDBG_DEBUG("ListenThread: Recv <%d.%d> [%s]", iRv, j, (char *)pucBuf)
             if(iRv > 0)
             {
                 ProcessData(j, pucBuf, iRv);
@@ -178,11 +191,12 @@ void *CTCPServer::ListenThread()
             }
             else
             {
-                ACTDBG_ERROR("ListenThread: Recv error<%d>.", iRv)
+                ACTDBG_ERROR("ListenThread: Recv error<%s>.", strerror(errno))
             }
         }
     }
     ACTDBG_INFO("ListenThread exit.");
+    return NULL;
 }
 
 int CTCPServer::ProcessData(int iConn, unsigned char *pBuf, int iLen)
@@ -193,6 +207,12 @@ int CTCPServer::ProcessData(int iConn, unsigned char *pBuf, int iLen)
         return -1;
     }
     ACTDBG_INFO("ProcessData: Conn<%d>, Len<%d>", iConn, iLen)
+    return 0;
+}
+
+int CTCPServer::OnConnected(int iConn)
+{
+    ACTDBG_INFO("OnConnected: <%d> do nothing.", iConn);
     return 0;
 }
 
@@ -216,9 +236,9 @@ int CTCPServer::Send(int iConn, unsigned char *pBuf, int iLen)
     while(iLeft>0)
     {
         iRv = send(m_piConnFd[iConn], pBuf+(iLen-iLeft), iSend, 0);
-        if(iRv = -1)
+        if(iRv == -1)
         {
-            ACTDBG_ERROR("Send: error<%d>.", iRv)
+            ACTDBG_ERROR("Send: error<%s>.", strerror(errno))
             break;
         }
         iLeft -= iSend;

@@ -28,9 +28,10 @@ public:
     virtual int PrintMe()=0;
 
 protected:
-    int m_iModID;
     ACTNODEINFO m_sInfo;
     
+private:
+    int m_iModID;
 };
 }
 

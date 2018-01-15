@@ -20,6 +20,7 @@ int ActDeleteNode(class CActNode *pNode)
 
 CActNodeIn::CActNodeIn():CActNode()
 {
+    m_iModID = g_cDebug.AddModule(NODEIN_MODNAME);
 
 }
 

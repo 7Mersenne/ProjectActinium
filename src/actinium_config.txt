@@ -1,4 +1,4 @@
 [Debug]
-   AllLevel=3
+   AllLevel=5
    AllMask=0
 
