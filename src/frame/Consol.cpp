@@ -26,14 +26,6 @@ int CConsole::Init()
 {
     char strTemp[CONFIGITEM_DATALEN];
 
-/*    if(pFrame == NULL) 
-    {
-        ACTDBG_ERROR("Init: Missing frame class pointer.")
-        return -1;
-    }
-
-    m_pFrame = pFrame;
-*/
     memset(strTemp, 0 , sizeof(strTemp));
     if(g_cConfig.GetConfigItem("Port", "Console", strTemp) == 0)
     {
