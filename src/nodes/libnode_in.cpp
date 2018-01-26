@@ -29,7 +29,7 @@ CActNodeIn::~CActNodeIn()
     
 }
 
-int CActNodeIn::PrintMe()
+int CActNodeIn::Init()
 {
     ACTDBG_INFO("I'm NodeIn.\n")
     return 0;

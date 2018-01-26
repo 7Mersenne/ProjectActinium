@@ -3,15 +3,18 @@
 extern "C"{
 #include "../include/node.h"
 
-#define NODEIN_MODNAME "Nodein"
+#define NODEIN_MODNAME "NodeinFile"
 
-class CActNodeIn:public CActNode
+class CActNodeInFile:public CActNode
 {
 public:
-    CActNodeIn();
-    ~CActNodeIn();
+    CActNodeInFile();
+    ~CActNodeInFile();
 
-    int PrintMe();
+    int Init();
+    int OneStep();
+    int Reset();
+    int Config(char *strConfig);
 
 private:
     int m_iModID;

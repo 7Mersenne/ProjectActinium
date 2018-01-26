@@ -25,7 +25,10 @@ public:
     CActNode();
 
     int GetInfo(ACTNODEINFO &sINfo);
-    virtual int PrintMe()=0;
+    virtual int Init()=0;
+    virtual int OneStep()=0;
+    virtual int Reset()=0;
+    
 
 protected:
     ACTNODEINFO m_sInfo;
@@ -33,6 +36,8 @@ protected:
 private:
     int m_iModID;
 };
+
+
 }
 
 
