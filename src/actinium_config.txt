@@ -1,4 +1,7 @@
 [Debug]
    AllLevel=5
    AllMask=0
-
+[ActFrame]
+   NodePathName=libs/libnode_in.so
+   CtrlIP=127.0.0.1
+   CtrlPort=8411

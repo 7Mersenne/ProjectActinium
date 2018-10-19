@@ -4,10 +4,12 @@
 #include "../include/frame.h"
 #include "../include/debug.h"
 #include "../include/node.h"
+#include "../include/config.h"
 
 CActFrame::CActFrame()
 {
     m_iState = ACTFRM_STATE_IDLE;
+    m_pdlHandle = NULL;
 }
 
 CActFrame::~CActFrame()
@@ -16,9 +18,10 @@ CActFrame::~CActFrame()
 
 int CActFrame::InitFrame()
 {
+    char strTemp[CONFIGITEM_DATALEN];
     m_iModID = g_cDebug.AddModule(FRAME_MODNAME);
 
-    ACTDBG_INFO("InitFrame: Test messages.");
+    ACTDBG_INFO("InitFrame: Test messages:");
     ACTDBG_DEBUG("InitFrame: debug.");
     ACTDBG_INFO("InitFrame: info.");
     ACTDBG_WARNING("InitFrame: warning.");
@@ -26,50 +29,116 @@ int CActFrame::InitFrame()
     ACTDBG_FATAL("InitFrame: fatal.");
 
 
-    char *error;
-    ActNodeCreater *GetNode;
-    ActNodeRemover *DelNode;
-
-    void *pdlHandle = dlopen("libs/libnode_in.so", RTLD_LAZY);
-    if((error = dlerror())!=NULL)
+    memset(strTemp, 0 , sizeof(strTemp));
+    if(g_cConfig.GetConfigItem(ACTFRM_NODEPATHNAME, FRAME_MODNAME, strTemp) == 0)
     {
-        ACTDBG_ERROR("dlopen fail: %s", error)
-        return 0;
-    }
-    GetNode = (ActNodeCreater *)dlsym(pdlHandle, "ActNewNode");
-    if((error = dlerror())!=NULL)
+        memcpy(m_strNodePathName, strTemp, CONFIGITEM_DATALEN);
+        if(AttachNode(m_strNodePathName))
+        {
+            ACTDBG_WARNING("InitFrame: AttachNode <%s> failed.", m_strNodePathName)
+            DetachNode();
+            return -1;
+        }
+    }   
+    else
     {
-        ACTDBG_ERROR("ActNewNode fail: %s", error)
-        return 0;
+        ACTDBG_WARNING("InitFrame: Cannot find NodePathName config.")
     }
-    DelNode = (ActNodeRemover *)dlsym(pdlHandle, "ActDeleteNode");
-    if((error = dlerror())!=NULL)
-    {
-        ACTDBG_ERROR("ActDeleteNode fail: %s", error)
-        return 0;
-    }
-    m_pNode = (*GetNode)();
-    m_pNode->PrintMe();
-    (*DelNode)(m_pNode);
-
-    ACTDBG_DEBUG("InitFrame: init console.")
-    m_Console.Init();
-    CMDITEM cmd;
-    sprintf(cmd.strName, "%s", ACTFRM_CMD_EXIT_NAME);
-    sprintf(cmd.strUsage, "%s", ACTFRM_CMD_EXIT_USAGE);
-    cmd.iParamCnt = 0;
-    cmd.pFunc = &OnCmdExit;
-    cmd.pContext = this;
-    m_Console.AddCmd(&cmd);
 
     return 0;
 }
 
 int CActFrame::UninitFrame()
 {
-    m_Console.Stop();
+    DetachNode();
     return 0;
 }
+
+int CActFrame::AttachNode(char *strNodePathName)
+{
+    char *error;
+    ActNodeCreater *GetNode;
+
+    if(strNodePathName == NULL)
+    {
+        ACTDBG_ERROR("AttachNde: Missing Node path name.")
+        return -1;
+    }
+
+    if(m_pNode)
+    {
+        ACTDBG_WARNING("AttachNode: Existing Node Object destroyed before create a new one.")
+        DetachNode();
+    }
+
+    if(m_pdlHandle)
+    {
+        dlclose(m_pdlHandle);
+        m_pdlHandle = NULL;
+        ACTDBG_WARNING("AttachNode: Existing Dll Handle closed before opening a new one.")
+    }
+
+
+    void *m_pdlHandle = dlopen(strNodePathName, RTLD_LAZY);
+    if((error = dlerror())!=NULL)
+    {
+        ACTDBG_ERROR("AttachNode: dlopen fail: %s", error)
+        return -1;
+    }
+    GetNode = (ActNodeCreater *)dlsym(m_pdlHandle, "ActNewNode");
+    if((error = dlerror())!=NULL)
+    {
+        ACTDBG_ERROR("AttachNode: cannot find symbol \"ActNewNode\" in %s", strNodePathName)
+        dlclose(m_pdlHandle);
+        return -1;
+    }
+
+    m_pNode = (*GetNode)();
+    if(m_pNode == NULL)
+    {
+        ACTDBG_ERROR("AttachNode: New node fail.")
+        dlclose(m_pdlHandle);
+        return -1;
+    }
+
+    ACTDBG_INFO("AttachNode: New node <%s> attached successfully.", strNodePathName)
+    return 0;
+}
+
+int CActFrame::DetachNode()
+{
+    char *error;
+    ActNodeRemover *DelNode;
+
+    if(m_pNode == NULL)
+    {
+        ACTDBG_WARNING("DetachNode: No node to be detached.")
+        return 0;
+    }
+
+    if(m_pdlHandle == NULL)
+    {
+        ACTDBG_ERROR("DetachNode: Dll handler missing.")
+        return -1;
+    }
+
+    DelNode = (ActNodeRemover *)dlsym(m_pdlHandle, "ActDeleteNode");
+    if((error = dlerror())!=NULL)
+    {
+        ACTDBG_ERROR("DetachNode: cannot find symbol \"ActDeleteNode\"")
+        return -1;
+    }
+
+    (*DelNode)(m_pNode);
+    m_pNode = NULL;
+
+    dlclose(m_pdlHandle);
+    m_pdlHandle = NULL;
+
+    ACTDBG_INFO("DetachNode: detach current node successfully.")
+    return 0;
+}
+
 
 int CActFrame::Run()
 {

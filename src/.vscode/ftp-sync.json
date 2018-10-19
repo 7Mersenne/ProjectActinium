@@ -1,0 +1,24 @@
+{
+    "remotePath": "/home/pcram/actinium/src",
+    "host": "192.168.3.104",
+    "username": "pcram",
+    "password": "pcramtest",
+    "port": 21,
+    "secure": false,
+    "protocol": "ftp",
+    "uploadOnSave": true,
+    "passive": false,
+    "debug": false,
+    "privateKeyPath": null,
+    "passphrase": null,
+    "ignore": [
+        "\\.vscode",
+        "\\.git",
+        "\\.DS_Store"
+    ],
+    "generatedFiles": {
+        "uploadOnSave": false,
+        "extensionsToInclude": [],
+        "path": ""
+    }
+}

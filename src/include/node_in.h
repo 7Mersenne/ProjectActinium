@@ -3,13 +3,13 @@
 extern "C"{
 #include "../include/node.h"
 
-#define NODEIN_MODNAME "NodeinFile"
+#define NODEIN_MODNAME "Nodein"
 
-class CActNodeInFile:public CActNode
+class CActNodeIn:public CActNode
 {
 public:
-    CActNodeInFile();
-    ~CActNodeInFile();
+    CActNodeIn();
+    ~CActNodeIn();
 
     int Init();
     int OneStep();

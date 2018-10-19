@@ -11,6 +11,10 @@ extern "C"{
 
 #define FRAME_MODNAME "ActFrame"
 
+#define ACTFRM_NODEPATHNAME "NodePathName"
+#define ACTFRM_CTRLIP "CtrlIP"
+#define ACTFRM_CTRLPORT "CtrlPort"
+
 #define ACTFRM_STATE_IDLE 0
 #define ACTFRM_STATE_RUN 1
 #define ACTFRM_STATE_PAUSE 2
@@ -26,6 +30,8 @@ public:
 
     int InitFrame();
     int UninitFrame();
+    int AttachNode(char *strNodePathName);
+    int DetachNode();
     int Run();
     int Pause(int iGo);
     int Stop();
@@ -41,7 +47,8 @@ protected:
     int m_iState;
     pthread_t m_MainThread;
     CActNode *m_pNode;
-    CConsole m_Console;
+    void *m_pdlHandle;
+    char m_strNodePathName[CONFIGITEM_DATALEN];
 private:
     int m_iModID;
 };

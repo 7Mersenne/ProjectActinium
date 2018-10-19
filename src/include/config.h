@@ -24,7 +24,7 @@ public:
     CActConfig();
 
     int Init();
-    int LoadConfigs();
+    int LoadConfigs(char *strFileName);
     int StoreConfigs();
     int ClearConfigs();
     int GetConfigItem(PCONFIGITEM pItem);

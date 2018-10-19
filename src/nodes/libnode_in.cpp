@@ -35,3 +35,15 @@ int CActNodeIn::Init()
     return 0;
 }
 
+int CActNodeIn::OneStep()
+{
+    ACTDBG_INFO("I'm NodeIn.\n")
+    return 0;
+}
+
+int CActNodeIn::Reset()
+{
+    ACTDBG_INFO("I'm NodeIn.\n")
+    return 0;
+}
+
