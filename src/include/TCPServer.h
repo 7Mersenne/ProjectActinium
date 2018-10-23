@@ -31,6 +31,8 @@ public:
     virtual int OnConnected(int iConn);
     int Send(int iConn, unsigned char *pBuf, int iLen);
 
+    pthread_t m_ListenThread;
+    
 protected:
     int m_iPort;
     int m_iSocketFd;
@@ -39,7 +41,6 @@ protected:
 
     int m_iState;
 
-    pthread_t m_ListenThread;
 
 private:
     int m_iModID;
