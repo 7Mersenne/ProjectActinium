@@ -5,11 +5,12 @@
 #include <ctype.h>
 
 #include "../include/config.h"
-#include "../include/console.h"
+#include "../include/TCPServer.h"
+#include "../include/nodescenter.h"
 
 CNodesCenter::CNodesCenter():CTCPServer()
 {
-    memset(m_sPacketQueue, 0, sizeof(m_pucPacketQueue));
+    memset(m_pucPacketQueue, 0, sizeof(m_pucPacketQueue));
     m_iQHead = 0;
     m_iQTail = 0;
 
@@ -59,7 +60,7 @@ int CNodesCenter::ClearQueue()
 int CNodesCenter::Push(int iConn)
 {
     unsigned char *pPacket = m_pucPacketBuf[iConn];
-    int iSize == m_iBytesInBuf[iConn];
+    int iSize = m_iBytesInBuf[iConn];
 
     if(pPacket == NULL)
     {
@@ -104,7 +105,7 @@ int CNodesCenter::Pop(unsigned char *&pPacket)
     if(m_iQHead == m_iQTail)
     {
         ACTDBG_WARNING("Pop: empty queue.")
-        memset(pPacket, 0, sizeof(DATA_PACKET));
+        pPacket = NULL;
         return -1;
     }
 
@@ -128,14 +129,14 @@ int CNodesCenter::MakeBuf(int iConn, int iNeed)
         else break;
     }
     pTmp = m_pucPacketBuf[iConn];
-    if(m_iBufSize < iSize)
+    if(m_iBufSize[iConn] < iSize)
     {
         m_pucPacketBuf[iConn] = NULL;
     }
     else return 0;
-    if(m_pucPacketBuff[iConn] == NULL)
+    if(m_pucPacketBuf[iConn] == NULL)
     {
-        m_pucPacketBuf[iConn] = mew unsinged char[iSize];
+        m_pucPacketBuf[iConn] = new unsigned char[iSize];
         if(pTmp)
         {
             memcpy(m_pucPacketBuf[iConn], pTmp, m_iBufSize[iConn]);
@@ -149,8 +150,6 @@ int CNodesCenter::MakeBuf(int iConn, int iNeed)
 int CNodesCenter::ProcessData(int iConn, unsigned char *pBuf, int iLen)
 {
     int i;
-    char strCmd[ACTCON_CMDMAXLEN];
-    char *pCur = strCmd;
 
     if((pBuf == NULL) || (iLen <=0) || (iConn<0) || (iConn>=ACTTCPSVR_MAXCONN))
     {
@@ -175,9 +174,9 @@ int CNodesCenter::ProcessData(int iConn, unsigned char *pBuf, int iLen)
             {
                 iCopy = iLen-i;
                 if(iCopy>sizeof(DATA_PACKET_HEADER))
-                iCopy = DATA_PACKET_HEADER;
+                    iCopy = sizeof(DATA_PACKET_HEADER);
                 MakeBuf(iConn, iCopy);
-                memcpy(m_pucPacketBuf[iConn], pBuf, iCopy)
+                memcpy(m_pucPacketBuf[iConn], pBuf, iCopy);
                 m_iBytesInBuf[iConn] = iCopy;
                 iCur += iCopy;
             }

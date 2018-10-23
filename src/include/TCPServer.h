@@ -15,6 +15,12 @@ extern "C"{
 #define ACTTCPSVR_MAXDATALEN 1024
 #define ACTTCPSVR_MAXSENDLEN 65536
 
+typedef struct tag_ConnThreadContext
+{
+    void *pThis;
+    int iConn;
+}CONN_THREAD_CONTEXT, *PCONN_THREAD_CONTEXT;
+
 class CTCPServer
 {
 public:
@@ -27,12 +33,18 @@ public:
     static void *ListenThreadFunc(void *arg);
     void *ListenThread();
 
+    int StartConnection(int iConn);
+    static void *ConnectionThreadFunc(void *arg);
+    void *ConnectionThread(int iConn);
+
     virtual int ProcessData(int iConn, unsigned char *pBuf, int iLen);
     virtual int OnConnected(int iConn);
+    virtual int OnDisconnected(int iConn);
     int Send(int iConn, unsigned char *pBuf, int iLen);
 
     pthread_t m_ListenThread;
-    
+    pthread_t m_ConnectionThread[ACTTCPSVR_MAXCONN];
+
 protected:
     int m_iPort;
     int m_iSocketFd;
@@ -40,6 +52,7 @@ protected:
     int m_piConnFd[ACTTCPSVR_MAXCONN];
 
     int m_iState;
+    int m_iConnState[ACTTCPSVR_MAXCONN];
 
 
 private:
