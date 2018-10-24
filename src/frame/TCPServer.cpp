@@ -65,11 +65,18 @@ int CTCPServer::Start(int iPort)
 int CTCPServer::Stop()
 {
     int i;
+    ACTDBG_DEBUG("Stop: <%d>", m_iPort)
     m_iState = 0;
     memset(m_iConnState, 0, sizeof(m_iConnState));
     pthread_join(m_ListenThread, NULL);
     if(m_iSocketFd>0)
         close(m_iSocketFd);
+    return 0;
+}
+
+int CTCPServer::StopConnection(int iConn)
+{
+    m_iConnState[iConn] = 0;
     return 0;
 }
 
@@ -234,8 +241,6 @@ void *CTCPServer::ConnectionThread(int iConn)
     fd_set fsRead;
     int iFdMax=0;
     struct timeval tvTimeOut;
-    tvTimeOut.tv_sec = ACTTCPSVR_TIMEOUT_US / 1000000L;
-    tvTimeOut.tv_usec = ACTTCPSVR_TIMEOUT_US % 1000000L;
 
     OnConnected(iConn);
 
@@ -246,6 +251,8 @@ void *CTCPServer::ConnectionThread(int iConn)
         FD_SET(m_piConnFd[iConn], &fsRead);
         iFdMax = m_piConnFd[iConn];
         
+        tvTimeOut.tv_sec = ACTTCPSVR_TIMEOUT_US / 1000000L;
+        tvTimeOut.tv_usec = ACTTCPSVR_TIMEOUT_US % 1000000L;
         iRv = select(iFdMax+1, &fsRead, NULL, NULL, &tvTimeOut);
         if(iRv == -1)
         {
@@ -272,7 +279,7 @@ void *CTCPServer::ConnectionThread(int iConn)
     OnDisconnected(iConn);
     close(m_piConnFd[iConn]);
     m_piConnFd[iConn] = -1;
-    ACTDBG_INFO("ListenThread exit.");
+    ACTDBG_INFO("ConnectionThread exit.");
     return NULL;
 }
 
@@ -329,3 +336,21 @@ int CTCPServer::Send(int iConn, unsigned char *pBuf, int iLen)
     return 0;
 }
 
+int CTCPServer::SendToAll(unsigned char *pBuf, int iLen)
+{
+    int i;
+
+    if((pBuf == NULL) || (iLen<0) || (iLen > ACTTCPSVR_MAXSENDLEN))
+    {
+        ACTDBG_ERROR("Send: Invalid Params.")
+        return -1;
+    }
+    
+    for(i=0; i<ACTTCPSVR_MAXCONN; i++)
+    {
+        if(m_piConnFd[i]>0)
+        Send(i, pBuf, iLen);
+    }
+
+    return 0;
+}

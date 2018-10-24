@@ -49,6 +49,7 @@ public:
     int Pop(unsigned char *&pPacket);
 
     int MakeBuf(int iConn, int iNeed);
+    int InitCmds();
 
 
 protected:

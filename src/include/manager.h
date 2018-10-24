@@ -7,6 +7,7 @@
 extern "C"{
 #include "config.h"
 #include "console.h"
+#include "nodescenter.h"
 #include "node.h"
 
 #define MANAGER_MODNAME "ActMan"
@@ -21,7 +22,6 @@ extern "C"{
 #define ACTMAN_STATE_RUN  1
 #define ACTMAN_STATE_STOP 2
 
-
 class CActMan
 {
 public:
@@ -30,11 +30,20 @@ public:
 
     int InitMan();
     int Run();
+    int InitCmds();
+    int Stop();
 
-
+    static int CmdExit(PCOMMAND pCmd, char *strRet, void *pContext);
+    int onCmdExit(PCOMMAND pCmd, char *strRet);
+    static int CmdShowUsers(PCOMMAND pCmd, char *strRet, void *pContext);
+    int onCmdShowUsers(PCOMMAND pCmd, char *strRet);
+    static int CmdShowNodes(PCOMMAND pCmd, char *strRet, void *pContext);
+    int onCmdShowNodes(PCOMMAND pCmd, char *strRet);
+    static int CmdShutDown(PCOMMAND pCmd, char *strRet, void *pContext);
+    int onCmdShutDown(PCOMMAND pCmd, char *strRet);
 protected:
 
-    CTCPServer m_cNodesCenter;
+    CNodesCenter m_cNodesCenter;
     CConsole m_cUsersCenter;
 
     int m_iUsersPort;

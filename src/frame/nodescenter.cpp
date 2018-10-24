@@ -27,6 +27,7 @@ CNodesCenter::~CNodesCenter()
     {
         if(m_pucPacketBuf[i]) delete m_pucPacketBuf[i];
     }
+    ClearQueue();
 }
 
 int CNodesCenter::Init()
