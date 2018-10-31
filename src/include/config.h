@@ -1,6 +1,6 @@
 #ifndef ACTINIUM_CONFIG_H_d61b1d79_4264_46c7_862f_5204445c527e
 #define ACTINIUM_CONFIG_H_d61b1d79_4264_46c7_862f_5204445c527e
-extern "C"{
+//extern "C"{
 
 #define CONFIG_FILENAME "actinium_config.txt"
 #define CONFIG_MODNAME "ActConfig"
@@ -52,5 +52,5 @@ class CActConfig g_cConfig;
 extern class CActConfig g_cConfig;
 #endif
 
-}
+//}
 #endif

@@ -1,6 +1,6 @@
 #ifndef ACTINIUM_PORT_H_9888c549_84fe_42fd_8d92_726f870cef2b
 #define ACTINIUM_PORT_H_9888c549_84fe_42fd_8d92_726f870cef2b
-extern "C"{
+//extern "C"{
 
 #include <time.h>
 
@@ -57,6 +57,6 @@ private:
 
 
 
-}
+//}
 #endif
 

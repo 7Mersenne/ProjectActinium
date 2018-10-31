@@ -8,12 +8,15 @@
 #include "../include/TCPServer.h"
 #include "../include/nodescenter.h"
 
-CNodesCenter::CNodesCenter():CTCPServer()
+PROCITEM g_sProcList[] = 
 {
-    memset(m_pucPacketQueue, 0, sizeof(m_pucPacketQueue));
-    m_iQHead = 0;
-    m_iQTail = 0;
+    {DATA_CMDTYPE_CONREPLY, &CNodesCenter::ProcConReply, 0},
+    {0}
+};
 
+
+CNodesCenter::CNodesCenter():CTCPServer(), CPackMach()
+{
     memset(m_pucPacketBuf, 0, sizeof(m_pucPacketBuf));
     memset(m_iBufSize, 0, sizeof(m_iBufSize));
     memset(m_iBytesInBuf, 0, sizeof(m_iBytesInBuf));
@@ -27,93 +30,17 @@ CNodesCenter::~CNodesCenter()
     {
         if(m_pucPacketBuf[i]) delete m_pucPacketBuf[i];
     }
-    ClearQueue();
 }
 
-int CNodesCenter::Init()
+int CNodesCenter::InitNodesCenter()
 {
     ACTDBG_INFO("Init Nodes Center.")
 
-    ClearQueue();
+    InitTopo();
 
     return 0;
 }
 
-int CNodesCenter::ClearQueue()
-{
-    int i;
-    if(m_iQHead == m_iQTail)
-    {
-        m_iQHead = m_iQTail = 0;
-        memset(m_pucPacketQueue, 0, sizeof(m_pucPacketQueue));
-        return 0;
-    }
-
-    for(i=m_iQHead; i!=m_iQTail; i++,i%=NODESCENTER_MAXQUEUE)
-    {
-        if(m_pucPacketQueue[i])
-            delete m_pucPacketQueue[i];
-    }
-    memset(m_pucPacketQueue, 0, sizeof(m_pucPacketQueue));
-    return 0;
-}
-
-int CNodesCenter::Push(int iConn)
-{
-    unsigned char *pPacket = m_pucPacketBuf[iConn];
-    int iSize = m_iBytesInBuf[iConn];
-
-    if(pPacket == NULL)
-    {
-        ACTDBG_WARNING("Push: null packet.")
-        return 0;
-    }
-
-    if(iSize <= 0)
-    {
-        ACTDBG_WARNING("Push: packet zero length.")
-        return 0;
-    }
-
-    if(((m_iQTail+1) % NODESCENTER_MAXQUEUE) == m_iQHead)
-    {
-        ACTDBG_ERROR("Push: Full, abandon packet. Serial<%d>, From<%d>, To<%d>.")
-        return -1;
-    }
-
-    unsigned char *pP = new unsigned char[iSize];
-    if(pP == NULL)
-    {
-        ACTDBG_ERROR("Push: not enough memory")
-        return -1;
-    }
-
-    memcpy(pP, pPacket, iSize);
-    if(m_pucPacketQueue[m_iQTail]) delete m_pucPacketQueue[m_iQTail];
-    m_pucPacketQueue[m_iQTail] = pP;
-    m_iQTail = (m_iQTail +1) % NODESCENTER_MAXQUEUE;
-    return 0;
-}
-
-int CNodesCenter::Pop(unsigned char *&pPacket)
-{
-    if(pPacket == NULL)
-    {
-        ACTDBG_WARNING("Pop: null packet.")
-        return -1; 
-    }
-
-    if(m_iQHead == m_iQTail)
-    {
-        ACTDBG_WARNING("Pop: empty queue.")
-        pPacket = NULL;
-        return -1;
-    }
-
-    pPacket = m_pucPacketQueue[m_iQHead];
-    m_iQHead = (m_iQHead+1) % NODESCENTER_MAXQUEUE;
-    return 0;
-}
 
 int CNodesCenter::MakeBuf(int iConn, int iNeed)
 {
@@ -168,7 +95,7 @@ int CNodesCenter::ProcessData(int iConn, unsigned char *pBuf, int iLen)
             // find header sync word
             for(i=0; i<iLen; i++) // possible bug here: ASSERT that sync word never be splitted.
             {
-                if(*(int *)(pBuf + i) == DATAPACKETSYNC) 
+                if(*(int *)(pBuf + i) == DATA_PACKETSYNC) 
                     break;
             }
             if(i<iLen)
@@ -207,7 +134,8 @@ int CNodesCenter::ProcessData(int iConn, unsigned char *pBuf, int iLen)
                 memcpy(m_pucPacketBuf[iConn]+m_iBytesInBuf[iConn], pBuf+iCur, iCopy);
                 m_iBytesInBuf[iConn] += iCopy;
                 iCur += iCopy;
-                Push(iConn);
+                unsigned char *pPacket = new unsigned char[m_iBytesInBuf[iConn]];
+                HandlePacket(pPacket);
                 m_iBytesInBuf[iConn] = 0;
             }
             else 
@@ -221,7 +149,8 @@ int CNodesCenter::ProcessData(int iConn, unsigned char *pBuf, int iLen)
         }
         else 
         {
-            Push(iConn);
+            unsigned char *pPacket = new unsigned char[m_iBytesInBuf[iConn]];
+            HandlePacket(pPacket);
             m_iBytesInBuf[iConn] = 0;
         }
     }
@@ -231,5 +160,96 @@ int CNodesCenter::ProcessData(int iConn, unsigned char *pBuf, int iLen)
 
 int CNodesCenter::OnConnected(int iConn)
 {
+    return 0;
+}
+
+int CNodesCenter::InitTopo()
+{
+    char strTmp[CONFIGITEM_DATALEN];
+    memset(strTmp, 0, sizeof(strTmp));
+    g_cConfig.GetConfigItem(NODESCENTER_ITEM_TOPO, NODESCENTER_MODNAME, strTmp);
+
+    if(strcmp(strTmp, NODESCENTER_TOPO_2DMESH) == 0)
+    {
+        ACTDBG_INFO("InitTopo: Init <%s>.", strTmp)
+
+        int iCol, iRow;
+        int iInputCnt, iOutputCnt;
+        g_cConfig.GetConfigItem(NODESCENTER_ITEM_COL, NODESCENTER_MODNAME, strTmp);
+        iCol = atoi(strTmp);
+        g_cConfig.GetConfigItem(NODESCENTER_ITEM_ROW, NODESCENTER_MODNAME, strTmp);
+        iRow = atoi(strTmp);
+
+        if((iCol == 0) || (iRow == 0))
+        {
+            ACTDBG_ERROR("InitTopo: invalid col<%d> or row<%d>.", iCol, iRow)
+            return -1;
+        }
+
+        m_iSeats = iCol * iRow;
+        m_pSeats = new SEAT[m_iSeats];
+        if(m_pSeats == NULL)
+        {
+            ACTDBG_ERROR("InitTopo: allocate <%d> seats fail.", m_iSeats)
+            return -1;
+        }
+        memset(m_pSeats, 0, sizeof(m_pSeats));
+
+        int i, j, k;
+        PSEAT pSeat;
+        for(j=0; j<iRow; j++)
+        {
+            for(i=0; i<iCol; i++)
+            {
+
+                pSeat = &m_pSeats[j*iRow+i];
+                pSeat->iState = NODESCENTER_SEATSTATE_AVAILABLE;
+                pSeat->sInfo.iID = j<<16 | i;
+                pSeat->sInfo.iType = 0;
+                pSeat->sInfo.iInputCnt = 2;
+                pSeat->sInfo.iOutputCnt = 2;
+                if(i>0)pSeat->sInfo.iInput[0] = i-1;
+                if(j>0)pSeat->sInfo.iInput[1] = j-1;
+                if(i<iCol-1)pSeat->sInfo.iOutput[0] = i+1;
+                if(j<iRow-1)pSeat->sInfo.iOutput[1] = j+1;
+                snprintf(pSeat->sInfo.strNickName, DATA_NICKNAME_LEN, "r%dc%d", j, i);
+            }
+        }
+    }
+    else
+    {
+        ACTDBG_WARNING("InitTopo: unsupported or none topo <%s>.", strTmp)
+        return -1;
+    }
+    return 0;
+}
+
+int CNodesCenter::ProcConReply(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext)
+{
+    if(!pContext) return -1;
+    CNodesCenter *pThis = (CNodesCenter *)pContext;
+    return pThis->onProcConReply(pPacket, pQuery);
+}
+int CNodesCenter::onProcConReply(unsigned char *&pPacket, unsigned char *&pQuery)
+{
+    if(!pQuery)
+    {
+        ACTDBG_ERROR("onProcConReqly: no query packet found.")
+        return -1;
+    }
+    
+    return 0;
+}
+
+int CNodesCenter::InitProcs()
+{
+    int i=0;
+    
+    while(g_sProcList[i].iCmdType)
+    {
+        g_sProcList[i].pContext = this;
+        AddProc(&g_sProcList[i]);
+        i++;
+    }
     return 0;
 }

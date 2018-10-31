@@ -8,7 +8,7 @@
 
 #include "../include/debug.h"
 
-extern "C"{
+//extern "C"{
 
 #define TCPCLIENT_MODNAME "TCPClient"
 #define ACTTCPCLI_TIMEOUT_US 100000L
@@ -45,6 +45,6 @@ protected:
 	
 };
 
-}
+//}
 #endif 
 

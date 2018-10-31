@@ -4,7 +4,7 @@
 #include <pthread.h>
 
 
-extern "C"{
+//extern "C"{
 #include "config.h"
 #include "console.h"
 #include "node.h"
@@ -58,5 +58,5 @@ private:
 
 
 
-}
+//}
 #endif

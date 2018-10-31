@@ -7,7 +7,7 @@
 
 #include "../include/debug.h"
 
-extern "C"{
+//extern "C"{
 
 #define TCPSERVER_MODNAME "TCPServer"
 #define ACTTCPSVR_MAXCONN 8
@@ -81,5 +81,5 @@ private:
 
 
 
-}
+//}
 #endif
