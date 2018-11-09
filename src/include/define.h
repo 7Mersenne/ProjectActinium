@@ -25,10 +25,12 @@ typedef struct tag_DataPacketHeader
     int iPayloadSize;   //Bytes followed this header
 }DATA_PACKET_HEADER, *PDATA_PACKET_HEADER;
 
-#define DATA_CMDTYPE_CONCMD 1 //Command from console to node frame
-#define DATA_CMDTYPE_CONREPLY 2 //reply from node frame to console
-#define DATA_CMDTYPE_NODECMD 3 //Command from node frame to console
+#define DATA_CMDTYPE_CONCMD 1    //Command from console to node frame
+#define DATA_CMDTYPE_CONREPLY 2  //reply from node frame to console
+#define DATA_CMDTYPE_NODECMD 3   //Command from node frame to console
 #define DATA_CMDTYPE_NODEREPLY 4 //reply from console to node frame
+#define DATA_CMDTYPE_CONFIG 5    //configuration information from the manager
+#define DATA_CMDTYPE_NODESTATE 6 //Node's state from frame to manager
 // append new command type here
 
 #define DATA_CONCMD_SETSTATE 1 // set_state command
@@ -90,6 +92,20 @@ typedef struct tag_NodeInfo
     char strCfgPathName[DATA_PATHNAME_LEN]; // Pathname of node's config file.
 }NODE_INFO, *PNODE_INFO;
 
+typedef struct tag_InterInfo
+{
+    int iID; // node ID, defined by nodescenter, unique in one nodescenter, treat it as "Logic ID" comparing with universal uniqe "Physical ID" which defined by node itself.
+    int iType; // node type, not defined yet.
+    int iInputCnt; // count of input ports
+    int iOutputCnt; // count of output ports
+    int iInput[DATA_INPUT_MAXCON]; // target node id to build a connection for every input port.
+    int iOutput[DATA_OUTPUT_MAXCON]; // target node id to build a connection for every output port.
+    int iInputState[DATA_INPUT_MAXCON];// connection state of every input port. DATA_PORTSTATE_XXX
+    int iOutputState[DATA_OUTPUT_MAXCON]; // connection state of every output port. DATA_PORTSTATE_XXX
+    char strNickName[DATA_NICKNAME_LEN]; // Nick name for this node in order to easily recognition for users.
+    char strLibPathName[DATA_PATHNAME_LEN]; // Pathname of node's so lib file.
+    char strCfgPathName[DATA_PATHNAME_LEN]; // Pathname of node's config file.
+}INTER_INFO, *PINTER_INFO;
 
 typedef struct tag_Payload_ConCmd
 {

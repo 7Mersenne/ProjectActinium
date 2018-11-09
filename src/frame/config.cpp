@@ -5,7 +5,7 @@
 #include "../include/debug.h"
 
 CActConfig::CActConfig()
-{
+{ 
     m_iState = 0;
     m_iItemsCnt = 0;
     m_iGroupCnt = 0;
@@ -17,6 +17,7 @@ int CActConfig::Init()
 {
     m_iModID = g_cDebug.AddModule(CONFIG_MODNAME);
     return 0;
+    
 }
 
 

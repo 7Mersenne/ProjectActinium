@@ -77,7 +77,7 @@ void *CTCPClient::ConnectFunc(void *arg)
 
 void *CTCPClient::ClientConnect()
 {   int i,j,iRv;
-    m_State = 1;
+//    m_State = 1;
 	if( (m_socket_fd = socket(AF_INET,SOCK_STREAM,0)) < 0 ) 
 	{
         ACTDBG_ERROR("create socket error: %s(errno:%d))",strerror(errno),errno)
@@ -98,12 +98,14 @@ void *CTCPClient::ClientConnect()
 	{
         ACTDBG_ERROR("Clientconnect error: %s(errno: %d)",strerror(errno),errno)
 		ACTDBG_INFO("%d will reconnect in 2s.",m_Port);
+		m_State = 0;
 		sleep(2);
 		ClientConnect();
 //        return NULL;        
     }
 
 	ACTDBG_INFO("ClientThread: ClientConnected<%d>.", m_Port);
+	m_State = 1;
 
 	fd_set fsRead;
 	int iFdMax=0;
@@ -117,6 +119,7 @@ void *CTCPClient::ClientConnect()
 		FD_ZERO(&fsRead);
 		FD_SET(m_socket_fd, &fsRead);
 		iFdMax = m_socket_fd;
+		m_State = 1;
 
 	    iRv = select(iFdMax+1, &fsRead,NULL, NULL, &tvTimeOut);
 		if(iRv == -1)
@@ -137,6 +140,7 @@ void *CTCPClient::ClientConnect()
 		if(iRv == 0)
 		{
 			ACTDBG_WARNING("Client: Connection <%d> closed.", m_Port)
+			m_State = 0;
 			ACTDBG_INFO("%d will reconnect in 2s.",m_Port);
 		    sleep(2);
 	     	ClientConnect();
@@ -183,4 +187,10 @@ int CTCPClient::Sendmess(unsigned char *Pbuf, int ilen)
 	}
 	ACTDBG_DEBUG("Client send: <%d> [%s]", iRv, (char *)Pbuf)
 	return 0;
+}
+
+int CTCPClient::OnConnect()
+{
+	if(m_State == 1) return 0;
+	else return -1;
 }

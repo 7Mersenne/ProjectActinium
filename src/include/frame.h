@@ -8,6 +8,9 @@
 #include "config.h"
 #include "console.h"
 #include "node.h"
+#include "interface.h"
+#include "nodescenter.h"
+#include "define.h"
 
 #define FRAME_MODNAME "ActFrame"
 
@@ -19,8 +22,15 @@
 #define ACTFRM_STATE_RUN 1
 #define ACTFRM_STATE_PAUSE 2
 
+#define ACTFRM_CONFIGURED 1
+#define ACTFRM_NOTCONFIGURED 0
+
 #define ACTFRM_CMD_EXIT_NAME "exit"
 #define ACTFRM_CMD_EXIT_USAGE "0 ops, exit main frame."
+
+#define ACTFRM_MAXCPORT 8
+#define ACTMAN_MANAGERPORT 8404
+#define ACTMAN_MANAGERIP "127.0.0.1"
 
 class CActFrame
 {
@@ -42,8 +52,24 @@ public:
 
     static int OnCmdExit(PCOMMAND pCmd, char *strRet, void *pContext);
 
+    int PacketData(void *pHeader, char *Data, int dLen);
+    //Packing and sending
+
+    static int AppConfig(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext);
+    int onAppConfig(unsigned char *&pPacket, unsigned char *&pQuery);
+
+
 
 protected:
+
+    CInterface m_cManager[ACTFRM_MAXCPORT];           //Client
+    CNodesCenter m_cNode;            //Server 
+    int m_iClientPort[ACTFRM_MAXCPORT];
+    char m_iClientIp[ACTFRM_MAXCPORT];
+    int m_iClientCon;                //Number of Client ports in configuration information
+    PDATA_PACKET_HEADER pHeader;
+    int m_iServerPort;
+
     int m_iState;
     pthread_t m_MainThread;
     CActNode *m_pNode;

@@ -14,6 +14,12 @@
 
 #define ACTMAN_NODEPORTITEM "NodeSvrPort"
 #define ACTMAN_USERPORTITEM "UserSvrPort"
+#define ACTMAN_NODECONFIG "NodeConfig"
+#define ACTMAN_NODEPORTNUM "m_iClientCon"
+#define ACTMAN_NODEPORT "m_iClientPort"
+#define ACTMAN_NODEIP "m_iClientIp"
+#define ACTMAN_NODESERVERPORT "m_iServerPort"
+#define ACTMAN_BUFSIZE 1024
 
 #define ACTMAN_DEFUSERPORT 8403
 #define ACTMAN_DEFNODEPORT 8404
@@ -41,6 +47,9 @@ public:
     int onCmdShowNodes(PCOMMAND pCmd, char *strRet);
     static int CmdShutDown(PCOMMAND pCmd, char *strRet, void *pContext);
     int onCmdShutDown(PCOMMAND pCmd, char *strRet);
+
+    static int NodeConfig(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext);
+    int onNodeConfig(unsigned char *&pPacket, unsigned char *&pQuery);
 protected:
 
     CNodesCenter m_cNodesCenter;

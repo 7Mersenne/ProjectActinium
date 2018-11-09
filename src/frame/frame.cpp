@@ -10,6 +10,13 @@ CActFrame::CActFrame()
 {
     m_iState = ACTFRM_STATE_IDLE;
     m_pdlHandle = NULL;
+    for(int i=0;i<ACTFRM_MAXCPORT;i++)
+    {
+        m_iClientPort[i] = 0;
+        m_iClientIp[i] = 0;
+    }
+    m_iClientCon = 0;
+    m_iServerPort = 0;
 }
 
 CActFrame::~CActFrame()
@@ -44,6 +51,9 @@ int CActFrame::InitFrame()
     {
         ACTDBG_WARNING("InitFrame: Cannot find NodePathName config.")
     }
+
+    m_cManager[0].Start(ACTMAN_MANAGERIP, ACTMAN_MANAGERPORT);
+
 
     return 0;
 }
@@ -154,6 +164,51 @@ int CActFrame::Run()
         Stop();
     }
     m_iState = ACTFRM_STATE_RUN;
+
+    if(m_cManager[0].OnConnect() == 0)
+    {
+        char status;
+        char *ps = &status;
+        ACTDBG_INFO("Frame: Send status to Manager.")
+        PDATA_PACKET_HEADER pHeader;
+        //Setting up packet header////
+        pHeader->iType = DATA_CMDTYPE_NODESTATE;
+        pHeader->iConn = ACTMAN_MANAGERPORT;
+        pHeader->iSync = DATA_PACKETSYNC;
+
+        //////////////////////////////
+
+        if(m_iClientCon >=1 )
+        {
+            status = 1;
+            for(int i=1; i<=m_iClientCon; i++)
+            {
+                char *IP = 0;
+                *IP = m_iClientIp[i];
+                if(m_cManager[i].Start(IP,m_iClientPort[i]) == 0)
+                {
+                    ACTDBG_INFO("Frame Client:%d started.",m_iClientPort[i])
+                }
+                else 
+                {
+                    ACTDBG_ERROR("Frame Client:%d start fail.",m_iClientPort[i])
+                    return -1;
+                }
+            }
+            if(m_cNode.Start(m_iServerPort) == 0)
+            {
+                ACTDBG_INFO("Frame Server:%d started.",m_iServerPort)
+            }
+            else 
+            {
+                ACTDBG_ERROR("Frame Server:%d start fail.",m_iServerPort)
+                return -1;
+            }
+        }
+        else status = 0;
+        PacketData(pHeader, ps, sizeof(status));
+
+    }
 /*    if(pthread_create(&m_MainThread, NULL, ThreadFunc, this))
     {
         ACTDBG_FATAL("Create MainThread fail, exit!")
@@ -222,5 +277,72 @@ int CActFrame::OnCmdExit(PCOMMAND pCmd, char *strRet, void *pContext)
     sprintf(strRet, "Main frame exit.");
     pThis->Stop();
     pThis->UninitFrame();
+    return 0;
+}
+
+int CActFrame::PacketData(void *pHeader, char *Data, int dLen)
+{
+    unsigned char message[ACTTCPCLI_MAXDATALEN];
+    if((Data == NULL) || (dLen <=0) || (dLen > (ACTTCPCLI_MAXDATALEN) - 40))
+    {
+        ACTDBG_ERROR("Frame: Packet Invalid Parameters.")
+        return -1;
+    }
+    memcpy(&message[0], &pHeader, 40);
+    memcpy(&message[40], &Data, sizeof(Data));
+    m_cManager[0].Sendmess(message, sizeof(message));
+
+    return 0;
+}
+
+int CActFrame::AppConfig(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext)
+{
+    if(!pContext) return -1;
+    CActFrame *pThis = (CActFrame *)pContext;
+    return pThis->onAppConfig(pPacket, pQuery);
+}
+
+int CActFrame::onAppConfig(unsigned char *&pPacket, unsigned char *&pQuery)
+{
+    if(*(int *)(pPacket) != DATA_PACKETSYNC)
+    {
+        ACTDBG_ERROR("Frame: AppConfig Invalid Parameters.")
+        return -1;
+    }
+    m_iClientCon = *(int *)(pPacket + 40);
+    int *pData = reinterpret_cast<int*>(pPacket+44);
+    
+    char *IP = 0;
+    for(int i=1; i<=m_iClientCon; i++)
+    {
+        m_iClientPort[i] = *(int *)(pData);
+        pData = pData + 4;
+
+        m_iClientIp[i] = *(char *)(pData);
+        pData = pData + 1;
+        *IP = m_iClientIp[i];
+
+        if(m_cManager[i].Start(IP,m_iClientPort[i]) == 0)
+        {
+            ACTDBG_INFO("Frame Client:%d started.",m_iClientPort[i])
+        }
+        else 
+        {
+            ACTDBG_ERROR("Frame Client:%d start fail.",m_iClientPort[i])
+            return -1;
+        }
+    }
+
+    m_iServerPort = *(int *)(pData);
+    if(m_cNode.Start(m_iServerPort) == 0)
+    {
+        ACTDBG_INFO("Frame Server:%d started.",m_iServerPort)
+    }
+    else 
+    {
+        ACTDBG_ERROR("Frame Server:%d start fail.",m_iServerPort)
+        return -1;
+    }
+
     return 0;
 }

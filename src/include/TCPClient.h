@@ -30,6 +30,8 @@ public:
 	virtual int processData(unsigned char *pbuf, int ilen);
 	int Sendmess(unsigned char *pbuf, int ilen);
 
+	int OnConnect();
+
 private:
 	int m_socket_fd;
 	int m_Port;

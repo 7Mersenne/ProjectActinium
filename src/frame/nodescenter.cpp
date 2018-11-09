@@ -7,10 +7,13 @@
 #include "../include/config.h"
 #include "../include/TCPServer.h"
 #include "../include/nodescenter.h"
+#include "../include/frame.h"
+#include "../include/manager.h"
 
 PROCITEM g_sProcList[] = 
 {
     {DATA_CMDTYPE_CONREPLY, &CNodesCenter::ProcConReply, 0},
+    {DATA_CMDTYPE_NODESTATE, &CActMan::NodeConfig, 0},
     {0}
 };
 

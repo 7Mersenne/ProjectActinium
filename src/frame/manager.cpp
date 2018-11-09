@@ -2,10 +2,13 @@
 #include <stdlib.h>
 #include <dlfcn.h>
 #include <unistd.h>
+#include <iostream>
+#include <string>
 #include "../include/manager.h"
 #include "../include/debug.h"
 #include "../include/node.h"
 #include "../include/config.h"
+using namespace std;
 
 CMDITEM g_sCmdList[] = 
 {
@@ -176,3 +179,77 @@ int CActMan::onCmdShutDown(PCOMMAND pCmd, char *strRet)
     Stop();
     return 0;
 }
+
+int CActMan::NodeConfig(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext)
+{
+    if(!pContext) return -1;
+    CActMan *pThis = (CActMan *)pContext;
+    return pThis->onNodeConfig(pPacket, pQuery);
+}
+
+int CActMan::onNodeConfig(unsigned char *&pPacket, unsigned char *&pQuery)
+{
+    char strTemp[CONFIGITEM_DATALEN];
+    PDATA_PACKET_HEADER pHeader;
+    pHeader = (tag_DataPacketHeader *)pPacket;
+    if(pHeader->iSync != DATA_PACKETSYNC)
+    {
+        ACTDBG_ERROR("Manager: NodeConfig Invalid request.")
+        return -1;
+    }
+    int *pData = reinterpret_cast<int*>(pPacket + 40);
+    if(*pData == 1)
+    {
+        ACTDBG_WARNING("Manager: Node %d existing configuration",pHeader->iConn)
+        return 0;
+    }
+    else if(*pData == 0)
+    {
+        ACTDBG_WARNING("Manager: Node %d is not configured",pHeader->iConn)
+        int Portnum = 0;
+        if(g_cConfig.GetConfigItem(ACTMAN_NODEPORTNUM, ACTMAN_NODECONFIG, strTemp) == 0)
+        {
+            Portnum = atoi(strTemp);
+        }
+        int Nodeport = 0;
+        int *Node = &Nodeport;
+        unsigned char *mess[ACTMAN_BUFSIZE];
+        for(int i=1; i<=Portnum; i++)
+        {
+            char *temp;
+            temp = ACTMAN_NODEPORT;
+            if(g_cConfig.GetConfigItem(temp += char(i), ACTMAN_NODECONFIG, strTemp) == 0)
+            {
+                Nodeport = atoi(strTemp);
+            }
+            memcpy(mess,Node,sizeof(Nodeport));
+            *mess = *mess + sizeof(Nodeport);
+            temp = ACTMAN_NODEIP;
+            if(g_cConfig.GetConfigItem(temp += char(i), ACTMAN_NODECONFIG, strTemp) == 0)
+            {
+                memcpy(mess,strTemp,sizeof(strTemp));
+                *mess = *mess + sizeof(strTemp);
+            }
+            temp = ACTMAN_NODESERVERPORT;
+            if(g_cConfig.GetConfigItem(temp, ACTMAN_NODECONFIG, strTemp) == 0)
+            {
+                Nodeport = atoi(strTemp);
+            }
+            memcpy(mess,Node,sizeof(Nodeport));
+        }
+        unsigned char message[ACTMAN_BUFSIZE];
+        memcpy(&message[0], &pHeader, 40);
+        memcpy(&message[40], mess, sizeof(mess));
+        if(m_cNodesCenter.Send(pHeader->iConn,message, sizeof(message)) == 0)
+        {
+            ACTDBG_INFO("Manager send config to node %d successfull.",pHeader->iConn)
+        }
+        else 
+        {
+            ACTDBG_ERROR("Manager send config to node %d fail.",pHeader->iConn)
+            return -1;
+        }
+    }
+    return 0;
+}
+
