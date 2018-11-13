@@ -1,0 +1,16 @@
+[Debug]
+    AllLevel=5
+    AllMask=0
+[Main]
+    Type=Node
+[ActFrame]
+    NodePathName=libs/libnode_in.so
+    CtrlIP=127.0.0.1
+    CtrlPort=8404
+[NodeConfig]
+    m_iClientCon=1
+    1m_iClientPort=8405
+    1m_iClientIp=127.0.0.1
+    m_iServerPort=8406
+
+
