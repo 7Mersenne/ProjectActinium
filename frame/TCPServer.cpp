@@ -332,7 +332,8 @@ int CTCPServer::Send(int iConn, unsigned char *pBuf, int iLen)
         if(iRv == -1)
         {
             ACTDBG_ERROR("Send: error<%s>.m_piConnFd=%d", strerror(errno),m_piConnFd[iConn])
-            break;
+//            break;
+            return -1;
         }
         iLeft -= iSend;
     }

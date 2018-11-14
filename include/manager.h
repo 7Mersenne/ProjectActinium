@@ -14,11 +14,15 @@
 
 #define ACTMAN_NODEPORTITEM "NodeSvrPort"
 #define ACTMAN_USERPORTITEM "UserSvrPort"
+
 #define ACTMAN_NODECONFIG "NodeConfig"
 #define ACTMAN_NODEPORTNUM "m_iClientCon"
 #define ACTMAN_NODEPORT "m_iClientPort"
 #define ACTMAN_NODEIP "m_iClientIp"
 #define ACTMAN_NODESERVERPORT "m_iServerPort"
+#define ACTMAN_NODESROWNUM "m_iNodesLoc_row"
+#define ACTMAN_NODESCOLNUM "m_iNodesLoc_col"
+#define ACTMAN_NODETYPE "m_iNodeType"
 #define ACTMAN_BUFSIZE 1024
 
 #define ACTMAN_DEFUSERPORT 8403
@@ -50,6 +54,8 @@ public:
 
     static int NodeConfig(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext, int iConn);
     int onNodeConfig(unsigned char *&pPacket, unsigned char *&pQuery, int iConn);
+    static int RestNodeState(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext, int iConn);
+    int onRestNodeState(unsigned char *&pPacket, unsigned char *&pQuery, int iConn);
 protected:
 
     CNodesCenter m_cNodesCenter;
@@ -57,6 +63,11 @@ protected:
 
     int m_iUsersPort;
     int m_iNodesPort;
+
+    int m_iNodesLoc_row;
+    int m_iNodesLoc_col;
+    int** Nodes_state;
+    int** Nodes_count;
 
     int m_iState;
 

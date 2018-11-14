@@ -7,10 +7,14 @@
     NodePathName=libs/libnode_in.so
     CtrlIP=127.0.0.1
     CtrlPort=8404
-[NodeConfig]
+[ActMan]
+    m_iNodesLoc_row=1
+    m_iNodesLoc_col=4
+[00NodeConfig]
+    m_iNodeType=3
     m_iClientCon=1
-    1m_iClientPort=8405
+    1m_iClientPort=8406
     1m_iClientIp=127.0.0.1
-    m_iServerPort=8406
+    m_iServerPort=8405
 
 

@@ -14,6 +14,7 @@ PROCITEM g_sProcList[] =
 {
     {DATA_CMDTYPE_CONREPLY, &CNodesCenter::ProcConReply, 0},
     {DATA_CMDTYPE_NODESTATE, &CActMan::NodeConfig, 0},
+    {DATA_CMDTYPE_NODEREST, &CActMan::RestNodeState, 0},
     {0}
 };
 
@@ -296,6 +297,25 @@ int CNodesCenter::InitProcs()
         g_sProcList[i].pContext = this;
         AddProc(&g_sProcList[i]);
         i++;
+    }
+    return 0;
+}
+
+int CNodesCenter::OnDisconnected(int iConn)
+{
+    int i=0;
+    unsigned char *pPacket;
+    unsigned char *pQuery;
+    
+    while(g_sProcList[i].iCmdType)
+    {
+        if(g_sProcList[i].iCmdType != DATA_CMDTYPE_NODEREST) 
+        {
+            i++;
+            continue;
+        }
+        (*g_sProcList[i].pFunc)(pPacket, pQuery, (void *)this, iConn);
+        break;
     }
     return 0;
 }

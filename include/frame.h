@@ -67,8 +67,9 @@ protected:
     int m_iClientPort[ACTFRM_MAXCPORT];
     int m_iClientIp[ACTFRM_MAXCPORT];
     int m_iClientCon;                //Number of Client ports in configuration information
-    PDATA_PACKET_HEADER pHeader;
+//    PDATA_PACKET_HEADER pHeader;
     int m_iServerPort;
+    int m_iNodetype;
 
     int m_iState;
     pthread_t m_MainThread;

@@ -220,6 +220,7 @@ int CActFrame::Run()
             ACTDBG_INFO("Frame:status=%d ,Send status to Manager.",*pstatus)
             PacketData(pHeader, pstatus, sizeof(status));
         }
+        free(pHeader);
     }
     else 
     {
@@ -328,13 +329,14 @@ int CActFrame::onAppConfig(unsigned char *&pPacket, unsigned char *&pQuery)
         ACTDBG_ERROR("Frame: AppConfig Invalid Parameters.")
         return -1;
     }
-    m_iClientCon = *(int *)(pPacket + 40);
-    int *pData = reinterpret_cast<int*>(pPacket+44);
+    m_iNodetype = *(int *)(pPacket + 40);
+    m_iClientCon = *(int *)(pPacket + 44);
+    int *pData = reinterpret_cast<int*>(pPacket+48);
 
     CInterface *pClientPort = new CInterface[m_iClientCon-1];
     
     char *IP = 0;
-    for(int i=1; i<=m_iClientCon; i++)
+    for(int i=0; i<m_iClientCon; i++)
     {
         m_iClientPort[i] = *(int *)(pData);
         pData = pData + 4;

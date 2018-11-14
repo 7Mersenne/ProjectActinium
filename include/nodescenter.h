@@ -42,6 +42,7 @@ public:
     int InitProcs();
     int ProcessData(int iConn, unsigned char *pBuf, int iLen);
     int OnConnected(int iConn);
+    int OnDisconnected(int iConn);
 
     int MakeBuf(int iConn, int iNeed);
     int InitTopo();

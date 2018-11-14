@@ -25,6 +25,8 @@ CActMan::CActMan()
     m_iUsersPort = ACTMAN_DEFUSERPORT;
     m_iNodesPort = ACTMAN_DEFNODEPORT;
     m_iState = ACTMAN_STATE_IDLE;
+    m_iNodesLoc_row = 0;
+    m_iNodesLoc_col = 0;
 }
 
 CActMan::~CActMan()
@@ -52,6 +54,34 @@ int CActMan::InitMan()
     {
         m_iUsersPort = atoi(strTemp);
     } 
+    if(g_cConfig.GetConfigItem(ACTMAN_NODESROWNUM, MANAGER_MODNAME, strTemp) == 0)
+    {
+        m_iNodesLoc_row = atoi(strTemp);
+    }
+    if(g_cConfig.GetConfigItem(ACTMAN_NODESCOLNUM, MANAGER_MODNAME, strTemp) == 0)
+    {
+        m_iNodesLoc_col = atoi(strTemp);
+    }
+    Nodes_state = new int* [m_iNodesLoc_row];
+    for(int i=0;i<m_iNodesLoc_row;i++)
+    {
+        Nodes_state[i] = new int [m_iNodesLoc_col];
+        for(int j=0;j<m_iNodesLoc_col;j++)
+        {
+            Nodes_state[i][j] = -1;
+        }
+    }
+
+    Nodes_count = new int* [m_iNodesLoc_row];
+    for(int i=0;i<m_iNodesLoc_row;i++)
+    {
+        Nodes_count[i] = new int [m_iNodesLoc_col];
+        for(int j=0;j<m_iNodesLoc_col;j++)
+        {
+            Nodes_count[i][j] = -1;
+        }
+    }
+
 
     InitCmds();
 
@@ -207,23 +237,47 @@ int CActMan::onNodeConfig(unsigned char *&pPacket, unsigned char *&pQuery, int i
     }
     else if(*pData == 0)
     {
+        char *iNodeConfig;
+        int l,k;
+        for(int l=0; l<m_iNodesLoc_row; l++)
+        {
+            for(int k=0; k<m_iNodesLoc_col; k++)
+            {
+                if(Nodes_state[l][k] == -1)
+                {
+                    iNodeConfig= new char[sizeof(ACTMAN_NODECONFIG) + sizeof(l) + sizeof(k)];
+                    sprintf(iNodeConfig, "%d%d%s", l, k, ACTMAN_NODECONFIG);
+                    l = m_iNodesLoc_row;
+                    k = m_iNodesLoc_col;
+                }
+            }
+        }
         ACTDBG_WARNING("Manager: Node %d is not configured",pHeader->iConn)
         int Portnum = 0;
-        if(g_cConfig.GetConfigItem(ACTMAN_NODEPORTNUM, ACTMAN_NODECONFIG, strTemp) == 0)
+        int Nodeport = 0;
+        int *Node = &Nodeport;
+        int NodeType = 0;
+        int *pNodeType = &NodeType;
+        unsigned char mess[ACTMAN_BUFSIZE];
+        int j=0;
+        if(g_cConfig.GetConfigItem(ACTMAN_NODETYPE, iNodeConfig, strTemp) == 0)
+        {
+            NodeType = atoi(strTemp);
+            memcpy(&mess[j],pNodeType,sizeof(NodeType));
+            j = j + sizeof(NodeType);
+        }
+        if(g_cConfig.GetConfigItem(ACTMAN_NODEPORTNUM, iNodeConfig, strTemp) == 0)
         {
             Portnum = atoi(strTemp);
             ACTDBG_INFO("Portnum:%d",Portnum)
         }
-        int Nodeport = 0;
-        int *Node = &Nodeport;
-        unsigned char mess[ACTMAN_BUFSIZE];
-        int j=0;
+        
         for(int i=1; i<=Portnum; i++)
         {
             char *Portname= new char[sizeof(ACTMAN_NODEPORT) + sizeof(i)];
             sprintf(Portname, "%d%s", i, ACTMAN_NODEPORT);
             
-            if(g_cConfig.GetConfigItem(Portname, ACTMAN_NODECONFIG, strTemp) == 0)
+            if(g_cConfig.GetConfigItem(Portname, iNodeConfig, strTemp) == 0)
             {
                 Nodeport = atoi(strTemp);
             }
@@ -234,14 +288,16 @@ int CActMan::onNodeConfig(unsigned char *&pPacket, unsigned char *&pQuery, int i
             int *pdwAddr = &dwAddr;
             char *Ipname= new char[sizeof(ACTMAN_NODEIP) + sizeof(i)];
             sprintf(Ipname, "%d%s", i, ACTMAN_NODEIP);
-            if(g_cConfig.GetConfigItem(Ipname, ACTMAN_NODECONFIG, strTemp) == 0)
+            if(g_cConfig.GetConfigItem(Ipname, iNodeConfig, strTemp) == 0)
             {
                 dwAddr = inet_addr(strTemp);
                 memcpy(&mess[j],pdwAddr,sizeof(dwAddr));
                 j = j + sizeof(dwAddr);
             }
+            delete Portname;
+            delete Ipname;
         }
-        if(g_cConfig.GetConfigItem(ACTMAN_NODESERVERPORT, ACTMAN_NODECONFIG, strTemp) == 0)
+        if(g_cConfig.GetConfigItem(ACTMAN_NODESERVERPORT, iNodeConfig, strTemp) == 0)
         {
             Nodeport = atoi(strTemp);
         }
@@ -254,17 +310,41 @@ int CActMan::onNodeConfig(unsigned char *&pPacket, unsigned char *&pQuery, int i
         if(m_cNodesCenter.Send(iConn,message, sizeof(message)) == 0)
         {
             ACTDBG_INFO("Manager send config to node %d successfull.",pHeader->iConn)
+            Nodes_state[l][k] = NodeType;
+            Nodes_count[l][k] = iConn;
         }
         else 
         {
             ACTDBG_ERROR("Manager send config to node %d fail.",pHeader->iConn)
             return -1;
         }
+        delete iNodeConfig;
     }
 
     else ACTDBG_ERROR("Manager: Node %d error status",pHeader->iConn)
     return 0;
 }
 
+int CActMan::RestNodeState(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext, int iConn)
+{
+    if(!pContext) return -1;
+    CActMan *pThis = (CActMan *)pContext;
+    return pThis->onRestNodeState(pPacket, pQuery, iConn);
+}
 
-
+int CActMan::onRestNodeState(unsigned char *&pPacket, unsigned char *&pQuery, int iConn)
+{
+    for(int l=0; l<m_iNodesLoc_row; l++)
+    {
+        for(int k=0; k<m_iNodesLoc_col; k++)
+        {
+            if(Nodes_state[l][k] == iConn)
+            {
+                Nodes_state[l][k] = -1;
+                Nodes_count[l][k] = -1;
+                return 0;
+            }
+        }
+    }
+    return 0;
+}
