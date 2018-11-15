@@ -52,7 +52,7 @@ int CActFrame::InitFrame()
         ACTDBG_WARNING("InitFrame: Cannot find NodePathName config.")
     }
 
-    m_cManager[0].Start(ACTMAN_MANAGERIP, ACTMAN_MANAGERPORT);
+    m_cManager.Start(ACTMAN_MANAGERIP, ACTMAN_MANAGERPORT);
 
 
     return 0;
@@ -156,7 +156,7 @@ int CActFrame::Run()
     if(m_iState == ACTFRM_STATE_RUN)
     {
         ACTDBG_WARNING("Run: Frame is running, do nothing.")
-        return 0;
+//        return 0;
     }
     if(m_iState == ACTFRM_STATE_PAUSE)
     {
@@ -165,12 +165,13 @@ int CActFrame::Run()
     }
     m_iState = ACTFRM_STATE_RUN;
 
-    if(m_cManager[0].OnConnect() == 0)
+    if(m_cManager.OnConnect() == 0)
     {
-        char status;
-        char *ps = &status;
+        int status;
+        int *pstatus = &status;
         ACTDBG_INFO("Frame: Send status to Manager.")
         PDATA_PACKET_HEADER pHeader;
+        pHeader=(struct tag_DataPacketHeader *)malloc(sizeof(struct tag_DataPacketHeader));
         //Setting up packet header////
         pHeader->iType = DATA_CMDTYPE_NODESTATE;
         pHeader->iConn = ACTMAN_MANAGERPORT;
@@ -178,14 +179,21 @@ int CActFrame::Run()
 
         //////////////////////////////
 
-        if(m_iClientCon >=1 )
+        if(m_iServerPort >0 )
         {
+            ACTDBG_INFO("Frame: Node have configed,start configuration.")
             status = 1;
+            ACTDBG_INFO("Frame: status = %d.",*pstatus)
+            PacketData(pHeader, pstatus, sizeof(status));
+            CInterface *pClientPort = new CInterface[m_iClientCon-1];
+    
+            char *IP = 0;
             for(int i=1; i<=m_iClientCon; i++)
             {
-                char *IP = 0;
-                *IP = m_iClientIp[i];
-                if(m_cManager[i].Start(IP,m_iClientPort[i]) == 0)
+                struct in_addr inAddr;
+                inAddr.s_addr = m_iClientIp[i];
+                IP = inet_ntoa(inAddr);        
+                if(pClientPort[i-1].Start(IP,m_iClientPort[i]) == 0)
                 {
                     ACTDBG_INFO("Frame Client:%d started.",m_iClientPort[i])
                 }
@@ -195,6 +203,7 @@ int CActFrame::Run()
                     return -1;
                 }
             }
+
             if(m_cNode.Start(m_iServerPort) == 0)
             {
                 ACTDBG_INFO("Frame Server:%d started.",m_iServerPort)
@@ -205,9 +214,20 @@ int CActFrame::Run()
                 return -1;
             }
         }
-        else status = 0;
-        PacketData(pHeader, ps, sizeof(status));
-
+        else
+        {
+            status = 0;
+            ACTDBG_INFO("Frame:status=%d ,Send status to Manager.",*pstatus)
+            PacketData(pHeader, pstatus, sizeof(status));
+        }
+        free(pHeader);
+    }
+    else 
+    {
+        ACTDBG_WARNING("Frame Client:%d unconnected.",m_iServerPort)
+        ACTDBG_INFO("%d will reconnect in 2s.",m_iServerPort);
+		sleep(1);
+		Run();
     }
 /*    if(pthread_create(&m_MainThread, NULL, ThreadFunc, this))
     {
@@ -280,22 +300,22 @@ int CActFrame::OnCmdExit(PCOMMAND pCmd, char *strRet, void *pContext)
     return 0;
 }
 
-int CActFrame::PacketData(void *pHeader, char *Data, int dLen)
+int CActFrame::PacketData(void *pHeader, int *Data, int dLen)
 {
     unsigned char message[ACTTCPCLI_MAXDATALEN];
-    if((Data == NULL) || (dLen <=0) || (dLen > (ACTTCPCLI_MAXDATALEN) - 40))
+    if((Data == NULL) || (dLen <=0) || (dLen > (ACTTCPCLI_MAXDATALEN - 40)))
     {
         ACTDBG_ERROR("Frame: Packet Invalid Parameters.")
         return -1;
     }
-    memcpy(&message[0], &pHeader, 40);
-    memcpy(&message[40], &Data, sizeof(Data));
-    m_cManager[0].Sendmess(message, sizeof(message));
-
+    ACTDBG_INFO("PacketData:%d",*Data)
+    memcpy(&message[0], pHeader, 40);
+    memcpy(&message[40], Data, sizeof(*Data));
+    m_cManager.Sendmess(message, sizeof(message));
     return 0;
 }
 
-int CActFrame::AppConfig(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext)
+int CActFrame::AppConfig(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext, int iConn)
 {
     if(!pContext) return -1;
     CActFrame *pThis = (CActFrame *)pContext;
@@ -309,20 +329,25 @@ int CActFrame::onAppConfig(unsigned char *&pPacket, unsigned char *&pQuery)
         ACTDBG_ERROR("Frame: AppConfig Invalid Parameters.")
         return -1;
     }
-    m_iClientCon = *(int *)(pPacket + 40);
-    int *pData = reinterpret_cast<int*>(pPacket+44);
+    m_iNodetype = *(int *)(pPacket + 40);
+    m_iClientCon = *(int *)(pPacket + 44);
+    int *pData = reinterpret_cast<int*>(pPacket+48);
+
+    CInterface *pClientPort = new CInterface[m_iClientCon-1];
     
     char *IP = 0;
-    for(int i=1; i<=m_iClientCon; i++)
+    for(int i=0; i<m_iClientCon; i++)
     {
         m_iClientPort[i] = *(int *)(pData);
         pData = pData + 4;
 
-        m_iClientIp[i] = *(char *)(pData);
-        pData = pData + 1;
-        *IP = m_iClientIp[i];
+        m_iClientIp[i] = *(int *)(pData);
+        pData = pData + 4;
 
-        if(m_cManager[i].Start(IP,m_iClientPort[i]) == 0)
+        struct in_addr inAddr;
+        inAddr.s_addr = m_iClientIp[i];
+        IP = inet_ntoa(inAddr);        
+        if(pClientPort[i-1].Start(IP,m_iClientPort[i]) == 0)
         {
             ACTDBG_INFO("Frame Client:%d started.",m_iClientPort[i])
         }

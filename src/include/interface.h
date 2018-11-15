@@ -40,15 +40,15 @@ public:
 
     int InitInterface();
     int InitProcs();
-    int ProcessData(unsigned char *pBuf, int iLen);
+    int ProcessData(int iConn, unsigned char *pBuf, int iLen);
     int OnConnected();
 
     int MakeBuf(int iNeed);
     int InitTopo();
 
-    static int ProcConReply(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext);
+    static int ProcConReply(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext, int iConn);
     int onProcConReply(unsigned char *&pPacket, unsigned char *&pQuery);
-    static int ProcConCmd(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext);
+    static int ProcConCmd(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext, int iConn);
     int onProcConCmd(unsigned char *&pPacket, unsigned char *&pQuery);
 
 protected:

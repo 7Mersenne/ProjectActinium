@@ -104,7 +104,7 @@ int CConsole::ProcessData(int iConn, unsigned char *pBuf, int iLen)
             char *pToken;
             pStr = m_strCurCmd[iConn];
             int iCnt=0;
-            while(pToken = strsep(&pStr, " "))
+            while((pToken = strsep(&pStr, " ")))
             {
                 if((iCnt>0) && (iCnt<ACTCON_CMDMAXPARAM))
                 {

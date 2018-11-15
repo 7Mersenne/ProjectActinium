@@ -42,11 +42,12 @@ public:
     int InitProcs();
     int ProcessData(int iConn, unsigned char *pBuf, int iLen);
     int OnConnected(int iConn);
+    int OnDisconnected(int iConn);
 
     int MakeBuf(int iConn, int iNeed);
     int InitTopo();
 
-    static int ProcConReply(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext);
+    static int ProcConReply(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext, int iConn);
     int onProcConReply(unsigned char *&pPacket, unsigned char *&pQuery);
 
 protected:

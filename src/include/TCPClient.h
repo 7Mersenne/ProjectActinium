@@ -1,5 +1,7 @@
 #ifndef ACTINIUM_TCPClient_H_b16609c5-14fe-40b2-a1fe-9f2b396ba212
-#define ACTINIUM_TCPClient_H_b16609c5-14fe-40b2-a1fe-9f2b396ba212
+#define ACTINIUM_TCPClient_H_b16609c5-14fe-40b2-a1fe-9f2b396ba212 
+
+
 
 #include <pthread.h>
 #include <sys/socket.h>

@@ -8,7 +8,7 @@
 #include <map>
 using namespace std;
 
-typedef int (*PPROCFUNC)(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext);
+typedef int (*PPROCFUNC)(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext, int iConn);
 
 typedef struct tag_ProcItem
 {
@@ -30,7 +30,7 @@ public:
     ~CPackMach();
 
     int InitPackMach();
-    int HandlePacket(unsigned char *pPacket);
+    int HandlePacket(unsigned char *pPacket,int iConn);
     int AddQueue(unsigned char *pPacket);
     int GetQueue(unsigned char *&pPacket, int iSerial);
     int ProcessPacket(unsigned char *pPacket, unsigned char *pQuery);

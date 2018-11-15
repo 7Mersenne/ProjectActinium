@@ -52,23 +52,24 @@ public:
 
     static int OnCmdExit(PCOMMAND pCmd, char *strRet, void *pContext);
 
-    int PacketData(void *pHeader, char *Data, int dLen);
+    int PacketData(void *pHeader, int *Data, int dLen);
     //Packing and sending
 
-    static int AppConfig(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext);
+    static int AppConfig(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext, int iConn);
     int onAppConfig(unsigned char *&pPacket, unsigned char *&pQuery);
 
 
 
 protected:
 
-    CInterface m_cManager[ACTFRM_MAXCPORT];           //Client
+    CInterface m_cManager;           //Client
     CNodesCenter m_cNode;            //Server 
     int m_iClientPort[ACTFRM_MAXCPORT];
-    char m_iClientIp[ACTFRM_MAXCPORT];
+    int m_iClientIp[ACTFRM_MAXCPORT];
     int m_iClientCon;                //Number of Client ports in configuration information
-    PDATA_PACKET_HEADER pHeader;
+//    PDATA_PACKET_HEADER pHeader;
     int m_iServerPort;
+    int m_iNodetype;
 
     int m_iState;
     pthread_t m_MainThread;

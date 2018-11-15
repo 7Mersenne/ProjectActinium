@@ -166,7 +166,7 @@ void *CTCPServer::ListenThread()
             {
                 if(m_piConnFd[j] == -1)
                 {
-                    ACTDBG_INFO("ListenThread: New Connection<%d>.", j);
+                    ACTDBG_INFO("ListenThread: New Connection<%d>.fd=%d", j,fd);
                     m_piConnFd[j] = fd;
                     StartConnection(j);
                     break;
@@ -228,7 +228,7 @@ int CTCPServer::StartConnection(int iConn)
         return -1;
     }
 
-    ACTDBG_INFO("StartConnection: ConnectionThread <%d> started successfully.", iConn)
+    ACTDBG_INFO("StartConnection: ConnectionThread <%d> started successfully. m_piConnFd=%d", iConn,m_piConnFd[iConn])
     return 0;
 }
 void *CTCPServer::ConnectionThread(int iConn)
@@ -264,9 +264,10 @@ void *CTCPServer::ConnectionThread(int iConn)
         {
             unsigned char pucBuf[ACTTCPSVR_MAXDATALEN] = {0};
             iRv = recv(m_piConnFd[iConn], pucBuf, sizeof(pucBuf), 0);
-            ACTDBG_DEBUG("ConnectionThread: Recv <%d.%d> [%s]", iRv, iConn, (char *)pucBuf)
+            ACTDBG_DEBUG("ConnectionThread: Recv <%d.%d> [%s],,,,m_piConnFd=%d", iRv, iConn, (char *)pucBuf,m_piConnFd[iConn])
             if(iRv > 0)
             {
+                ACTDBG_INFO("ProcessData: m_piConnFd=%d", m_piConnFd[iConn])
                 ProcessData(iConn, pucBuf, iRv);
             }
             else
@@ -321,6 +322,8 @@ int CTCPServer::Send(int iConn, unsigned char *pBuf, int iLen)
         ACTDBG_ERROR("Send: Bad Connection <%d>%d.", iConn, m_piConnFd[iConn])
         return -1;
     }
+    
+    ACTDBG_INFO("Send: m_piConnFd=%d", m_piConnFd[iConn])
     int iLeft = iLen;
     int iSend = iLeft>ACTTCPSVR_MAXDATALEN?ACTTCPSVR_MAXDATALEN:iLeft;
     while(iLeft>0)
@@ -328,12 +331,15 @@ int CTCPServer::Send(int iConn, unsigned char *pBuf, int iLen)
         iRv = send(m_piConnFd[iConn], pBuf+(iLen-iLeft), iSend, 0);
         if(iRv == -1)
         {
-            ACTDBG_ERROR("Send: error<%s>.", strerror(errno))
-            break;
+            ACTDBG_ERROR("Send: error<%s>.m_piConnFd=%d", strerror(errno),m_piConnFd[iConn])
+//            break;
+            return -1;
         }
         iLeft -= iSend;
     }
+
     return 0;
+
 }
 
 int CTCPServer::SendToAll(unsigned char *pBuf, int iLen)

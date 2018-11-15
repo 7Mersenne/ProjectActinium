@@ -14,6 +14,7 @@ PROCITEM g_sProcList[] =
 {
     {DATA_CMDTYPE_CONREPLY, &CNodesCenter::ProcConReply, 0},
     {DATA_CMDTYPE_NODESTATE, &CActMan::NodeConfig, 0},
+    {DATA_CMDTYPE_NODEREST, &CActMan::ResetNodeState, 0},
     {0}
 };
 
@@ -78,6 +79,47 @@ int CNodesCenter::MakeBuf(int iConn, int iNeed)
     return 0;
 }
 
+int CNodesCenter::ProcessData(int iConn, unsigned char *pBuf, int iLen)
+{
+    int i;
+
+    if((pBuf == NULL) || (iLen <=0) || (iConn<0) || (iConn>=ACTTCPSVR_MAXCONN))
+    {
+        ACTDBG_ERROR("ProcessData: Invalid Parameters.")
+        return -1;
+    }
+
+    int iCur = 0;
+    int iCopy = 0;
+    PDATA_PACKET_HEADER pHeader;
+    pHeader=(struct tag_DataPacketHeader *)malloc(sizeof(struct tag_DataPacketHeader));
+    for(i=0; i<iLen; i++) // possible bug here: ASSERT that sync word never be splitted.
+    {
+        if(*(int *)(pBuf + i) == DATA_PACKETSYNC)
+        {   
+            ACTDBG_INFO("NodesCenter:ProcessData find header sync word") 
+            iCur = 1;
+            break;
+        }
+    }
+        if(iCur == 1)
+        {
+            iCopy = iLen-i;
+            MakeBuf(iConn, iCopy);
+            memcpy(m_pucPacketBuf[iConn], pBuf+i, iCopy);
+            ACTDBG_DEBUG("NodesCenter:ProcessData [%s]",(char *)m_pucPacketBuf[iConn])
+            HandlePacket(m_pucPacketBuf[iConn],iConn);
+            m_iBytesInBuf[iConn] = 0;
+        }
+        else 
+        {
+            ACTDBG_ERROR("NodesCenter:ProcessData loss sync.")
+            return -1;
+        }
+    return 0;
+}
+
+/*
 int CNodesCenter::ProcessData(int iConn, unsigned char *pBuf, int iLen)
 {
     int i;
@@ -160,6 +202,8 @@ int CNodesCenter::ProcessData(int iConn, unsigned char *pBuf, int iLen)
     return 0;
 }
 
+*/
+
 
 int CNodesCenter::OnConnected(int iConn)
 {
@@ -227,7 +271,7 @@ int CNodesCenter::InitTopo()
     return 0;
 }
 
-int CNodesCenter::ProcConReply(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext)
+int CNodesCenter::ProcConReply(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext, int iConn)
 {
     if(!pContext) return -1;
     CNodesCenter *pThis = (CNodesCenter *)pContext;
@@ -253,6 +297,25 @@ int CNodesCenter::InitProcs()
         g_sProcList[i].pContext = this;
         AddProc(&g_sProcList[i]);
         i++;
+    }
+    return 0;
+}
+
+int CNodesCenter::OnDisconnected(int iConn)
+{
+    int i=0;
+    unsigned char *pPacket;
+    unsigned char *pQuery;
+    
+    while(g_sProcList[i].iCmdType)
+    {
+        if(g_sProcList[i].iCmdType != DATA_CMDTYPE_NODEREST) 
+        {
+            i++;
+            continue;
+        }
+        (*g_sProcList[i].pFunc)(pPacket, pQuery, (void *)this, iConn);
+        break;
     }
     return 0;
 }

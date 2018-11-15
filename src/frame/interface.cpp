@@ -73,85 +73,43 @@ int CInterface::MakeBuf(int iNeed)
     return 0;
 }
 
-int CInterface::ProcessData(unsigned char *pBuf, int iLen)
+int CInterface::ProcessData(int iConn, unsigned char *pBuf, int iLen)
 {
     int i;
 
-    if((pBuf == NULL) || (iLen <=0))
+    if((pBuf == NULL) || (iLen <=0) || (iConn<0) || (iConn>=ACTTCPSVR_MAXCONN))
     {
-        ACTDBG_ERROR("Interface ProcessData: Invalid Parameters.")
+        ACTDBG_ERROR("ProcessData: Invalid Parameters.")
         return -1;
     }
 
     int iCur = 0;
     int iCopy = 0;
     PDATA_PACKET_HEADER pHeader;
-    while(iCur<iLen)
+    pHeader=(struct tag_DataPacketHeader *)malloc(sizeof(struct tag_DataPacketHeader));
+    for(i=0; i<iLen; i++) // possible bug here: ASSERT that sync word never be splitted.
     {
-        if(m_iBytesInBuf == 0)
-        {
-            // find header sync word
-            for(i=0; i<iLen; i++)
-            {
-                if(*(int *)(pBuf + i) == DATA_PACKETSYNC) 
-                    break;
-            }
-            if(i<iLen)
-            {
-                iCopy = iLen-i;
-                if(iCopy>sizeof(DATA_PACKET_HEADER))
-                    iCopy = sizeof(DATA_PACKET_HEADER);
-                MakeBuf(iCopy);
-                memcpy(m_pucPacketBuf, pBuf, iCopy);
-                m_iBytesInBuf = iCopy;
-                iCur += iCopy;
-            }
-            else
-            {
-                iCur = iLen;
-            }
-            continue;
+        if(*(int *)(pBuf + i) == DATA_PACKETSYNC)
+        {   
+            ACTDBG_INFO("NodesCenter:ProcessData find header sync word") 
+            iCur = 1;
+            break;
         }
-        if(m_iBytesInBuf < sizeof(DATA_PACKET_HEADER))
+    }
+        if(iCur == 1)
         {
-            iCopy = sizeof(DATA_PACKET_HEADER) - m_iBytesInBuf;
-            if(iCopy <= iLen - iCur) iCopy = iLen - iCur;
+            iCopy = iLen-i;
             MakeBuf(iCopy);
-            memcpy(m_pucPacketBuf+m_iBytesInBuf, pBuf+iCur, iCopy);
-            m_iBytesInBuf += iCopy;
-            iCur += iCopy;
-            continue;
-        }
-        pHeader = (PDATA_PACKET_HEADER)m_pucPacketBuf;
-        iCopy = pHeader->iPayloadSize;
-        if(iCopy)
-        {
-            if(iCopy <= iLen-iCur)
-            {
-                MakeBuf(iCopy);
-                memcpy(m_pucPacketBuf+m_iBytesInBuf, pBuf+iCur, iCopy);
-                m_iBytesInBuf += iCopy;
-                iCur += iCopy;
-                unsigned char *pPacket = new unsigned char[m_iBytesInBuf];
-                HandlePacket(pPacket);
-                m_iBytesInBuf = 0;
-            }
-            else 
-            {
-                iCopy = iLen-iCur;
-                MakeBuf(iCopy);
-                memcpy(m_pucPacketBuf+m_iBytesInBuf, pBuf+iCur, iCopy);
-                m_iBytesInBuf += iCopy;
-                iCur += iCopy;
-            }
+            memcpy(m_pucPacketBuf, pBuf+i, iCopy);
+            ACTDBG_DEBUG("NodesCenter:ProcessData [%s]",(char *)m_pucPacketBuf)
+            HandlePacket(m_pucPacketBuf,iConn);
+            m_iBytesInBuf = 0;
         }
         else 
         {
-            unsigned char *pPacket = new unsigned char[m_iBytesInBuf];
-            HandlePacket(pPacket);
-            m_iBytesInBuf = 0;
+            ACTDBG_ERROR("NodesCenter:ProcessData loss sync.")
+            return -1;
         }
-    }
     return 0;
 }
 
@@ -221,7 +179,7 @@ int CInterface::InitTopo()
     return 0;
 }
 
-int CInterface::ProcConReply(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext)
+int CInterface::ProcConReply(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext, int iConn)
 {
     if(!pContext) return -1;
     CInterface *pThis = (CInterface *)pContext;
@@ -239,7 +197,7 @@ int CInterface::onProcConReply(unsigned char *&pPacket, unsigned char *&pQuery)
     return 0;
 }
 
-int CInterface::ProcConCmd(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext)
+int CInterface::ProcConCmd(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext, int iConn)
 {
     if(!pContext) return -1;
     CInterface *pThis = (CInterface *)pContext;

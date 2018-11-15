@@ -7,6 +7,9 @@
 #include "../include/config.h"
 #include "../include/debug.h"
 #include "../include/PacketMachine.h"
+#include "../include/nodescenter.h"
+#include "../include/manager.h"
+
 
 
 CPackMach::CPackMach()
@@ -29,7 +32,7 @@ int CPackMach::InitPackMach()
     return 0;
 }
 
-int CPackMach::HandlePacket(unsigned char *pPacket)
+int CPackMach::HandlePacket(unsigned char *pPacket,int iConn)
 {
     unsigned char *pQuery = NULL;
     PDATA_PACKET_HEADER pHeader = (PDATA_PACKET_HEADER) pPacket;
@@ -48,14 +51,20 @@ int CPackMach::HandlePacket(unsigned char *pPacket)
     switch(pHeader->iState)
     {
         case DATA_PACKETSTATE_NEEDREPLY:
+        ACTDBG_INFO("HandlePacket: AddQueue.")
+        pHeader->iConn = iConn;
         AddQueue(pPacket);
 
         case DATA_PACKETSTATE_NOREPLY:
+        ACTDBG_INFO("HandlePacket: ProcessPacket.")
+        pHeader->iConn = iConn;
         ProcessPacket(pPacket, NULL);
         break;
         
         case DATA_PACKETSTATE_REPLY:
+        ACTDBG_INFO("HandlePacket: GetQueue.")
         GetQueue(pQuery, pHeader->iSerial);
+        pHeader->iConn = iConn;
         ProcessPacket(pPacket, pQuery);
         break;
         
@@ -77,10 +86,11 @@ int CPackMach::ProcessPacket(unsigned char *pPacket, unsigned char *pQuery)
 
     int i, iProcessed = 0;
     PDATA_PACKET_HEADER pHeader = (PDATA_PACKET_HEADER)pPacket;
+    ACTDBG_INFO("ProcessPacket: pHeader->iType %d.",pHeader->iType)
     for(i=0; i<m_iListSize; i++)
     {
         if(m_pProcList[i].iCmdType != pHeader->iType) continue;
-        (*m_pProcList[i].pFunc)(pPacket, pQuery, (void *)this);
+        (*m_pProcList[i].pFunc)(pPacket, pQuery, (void *)this, pHeader->iConn);
         iProcessed++;
         if(pPacket == NULL) break;
     }

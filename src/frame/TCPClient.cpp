@@ -76,7 +76,7 @@ void *CTCPClient::ConnectFunc(void *arg)
 }
 
 void *CTCPClient::ClientConnect()
-{   int i,j,iRv;
+{   int j,iRv;
 //    m_State = 1;
 	if( (m_socket_fd = socket(AF_INET,SOCK_STREAM,0)) < 0 ) 
 	{
@@ -148,6 +148,7 @@ void *CTCPClient::ClientConnect()
 		
 	}
 	ACTDBG_INFO("ClientThread exit.");
+	return 0;
 }
 
 int CTCPClient::processData(unsigned char *rebuf, int ilen)

@@ -74,8 +74,8 @@ int CReadf::Packet(char *rBuf, int rLen)
     }
     pHeader->iPayloadSize = sizeof(rBuf);
     pHeader->iSerial = m_iSerialCon++;
-    memcpy(&m_message[0], &pHeader, 40);
-    memcpy(&m_message[40], &rBuf, sizeof(rBuf));
+    memcpy(&m_message[0], pHeader, 40);
+    memcpy(&m_message[40], rBuf, sizeof(*rBuf));
 
     return 0;
 }

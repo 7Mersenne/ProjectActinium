@@ -31,6 +31,7 @@ typedef struct tag_DataPacketHeader
 #define DATA_CMDTYPE_NODEREPLY 4 //reply from console to node frame
 #define DATA_CMDTYPE_CONFIG 5    //configuration information from the manager
 #define DATA_CMDTYPE_NODESTATE 6 //Node's state from frame to manager
+#define DATA_CMDTYPE_NODEREST 7  //rest Manager's Node_state
 // append new command type here
 
 #define DATA_CONCMD_SETSTATE 1 // set_state command
@@ -117,5 +118,6 @@ typedef struct tag_Payload_ConCmd
         // add param struct for new command here
     };
 }PAYLOAD_CONCMD, *PPAYLOAD_CONCMD;
+
 
 #endif
