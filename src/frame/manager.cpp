@@ -237,6 +237,7 @@ int CActMan::onNodeConfig(unsigned char *&pPacket, unsigned char *&pQuery, int i
     }
     else if(*pData == 0)
     {
+        ACTDBG_WARNING("Manager: Node %d is not configured",pHeader->iConn)
         char *iNodeConfig;
         int l,k;
         for(int l=0; l<m_iNodesLoc_row; l++)
@@ -252,7 +253,6 @@ int CActMan::onNodeConfig(unsigned char *&pPacket, unsigned char *&pQuery, int i
                 }
             }
         }
-        ACTDBG_WARNING("Manager: Node %d is not configured",pHeader->iConn)
         int Portnum = 0;
         int Nodeport = 0;
         int *Node = &Nodeport;

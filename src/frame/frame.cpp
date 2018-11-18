@@ -333,7 +333,8 @@ int CActFrame::onAppConfig(unsigned char *&pPacket, unsigned char *&pQuery)
     m_iClientCon = *(int *)(pPacket + 44);
     int *pData = reinterpret_cast<int*>(pPacket+48);
 
-    CInterface *pClientPort = new CInterface[m_iClientCon-1];
+    pClientPort = new CInterface [m_iClientCon-1];
+    
     
     char *IP = 0;
     for(int i=0; i<m_iClientCon; i++)
@@ -347,7 +348,7 @@ int CActFrame::onAppConfig(unsigned char *&pPacket, unsigned char *&pQuery)
         struct in_addr inAddr;
         inAddr.s_addr = m_iClientIp[i];
         IP = inet_ntoa(inAddr);        
-        if(pClientPort[i-1].Start(IP,m_iClientPort[i]) == 0)
+        if(pClientPort[i].Start(IP,m_iClientPort[i]) == 0)
         {
             ACTDBG_INFO("Frame Client:%d started.",m_iClientPort[i])
         }
@@ -369,5 +370,18 @@ int CActFrame::onAppConfig(unsigned char *&pPacket, unsigned char *&pQuery)
         return -1;
     }
 
+    return 0;
+}
+
+int CActFrame::HandleDate(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext, int iConn)
+{
+    if(!pContext) return -1;
+    CActFrame *pThis = (CActFrame *)pContext;
+    return pThis->onHandleDate(pPacket, pQuery);
+}
+
+int CActFrame::onHandleDate(unsigned char *&pPacket, unsigned char *&pQuery)
+{
+    pClientPort[0].Sendmess(pPacket,sizeof(*pPacket));
     return 0;
 }

@@ -15,6 +15,7 @@ PROCITEM g_sProcList[] =
     {DATA_CMDTYPE_CONREPLY, &CNodesCenter::ProcConReply, 0},
     {DATA_CMDTYPE_NODESTATE, &CActMan::NodeConfig, 0},
     {DATA_CMDTYPE_NODEREST, &CActMan::ResetNodeState, 0},
+    {DATA_CMDTYPE_DATA,&CActFrame::HandleDate, 0},
     {0}
 };
 

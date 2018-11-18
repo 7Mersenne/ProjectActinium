@@ -32,6 +32,7 @@ typedef struct tag_DataPacketHeader
 #define DATA_CMDTYPE_CONFIG 5    //configuration information from the manager
 #define DATA_CMDTYPE_NODESTATE 6 //Node's state from frame to manager
 #define DATA_CMDTYPE_NODEREST 7  //rest Manager's Node_state
+#define DATA_CMDTYPE_DATA 8 //Date
 // append new command type here
 
 #define DATA_CONCMD_SETSTATE 1 // set_state command

@@ -6,8 +6,6 @@
 
 extern "C"{
 #define READF_MODNAME "Readf"
-#define DESTPORT 4396
-#define DESTIP "127.0.0.1"
 #define READF_READMAXLEN (ACTTCPCLI_MAXDATALEN-40)
 
 
@@ -17,7 +15,7 @@ public:
     CReadf();
     ~CReadf();
 
-    int InitReadf();
+    int InitReadf(unsigned char *pPacket);
     int ReadFile();
     int Packet(char *rBuf, int rLen);
 
@@ -25,6 +23,8 @@ private:
     unsigned char m_message[ACTTCPCLI_MAXDATALEN];
     int m_iSerialCon;
     const char *fpath;
+    int m_iSendPort;
+	char* m_iSendIp;
 
 protected:
     int m_iModID;

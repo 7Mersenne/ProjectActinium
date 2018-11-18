@@ -57,6 +57,8 @@ public:
 
     static int AppConfig(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext, int iConn);
     int onAppConfig(unsigned char *&pPacket, unsigned char *&pQuery);
+    static int HandleDate(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext, int iConn);
+    int onHandleDate(unsigned char *&pPacket, unsigned char *&pQuery);
 
 
 
@@ -64,6 +66,7 @@ protected:
 
     CInterface m_cManager;           //Client
     CNodesCenter m_cNode;            //Server 
+    CInterface *pClientPort;
     int m_iClientPort[ACTFRM_MAXCPORT];
     int m_iClientIp[ACTFRM_MAXCPORT];
     int m_iClientCon;                //Number of Client ports in configuration information

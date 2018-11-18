@@ -21,15 +21,32 @@ CReadf::~CReadf()
 
 }
 
-int CReadf::InitReadf()
+int CReadf::InitReadf(unsigned char *pPacket)
 {
-    if(Start(DESTIP,DESTPORT) == 0)
+    if(*(int *)(pPacket) != DATA_PACKETSYNC)
     {
-        ACTDBG_INFO("InitReadf: Start SendPort <%d> successfully.", DESTPORT)
+        ACTDBG_ERROR("Frame: AppConfig Invalid Parameters.")
+        return -1;
+    }
+
+    int *pData = reinterpret_cast<int*>(pPacket+48);
+  
+    m_iSendPort = *(int *)(pData);
+    pData = pData + 4;
+
+    int m_iClientIp = *(int *)(pData);
+    pData = pData + 4;
+
+    struct in_addr inAddr;
+    inAddr.s_addr = m_iClientIp;
+    m_iSendIp = inet_ntoa(inAddr); 
+    if(Start(m_iSendIp,m_iSendPort) == 0)
+    {
+        ACTDBG_INFO("InitReadf: Start SendPort <%d> successfully.", m_iSendPort)
     }
     else
     {
-        ACTDBG_ERROR("InitReadf: Start SendPort <%d> fail.", DESTPORT);
+        ACTDBG_ERROR("InitReadf: Start SendPort <%d> fail.", m_iSendPort);
     }
 }
 
@@ -41,7 +58,7 @@ int CReadf::ReadFile()
     if((fp = fopen(fpath,"r")) == NULL)
     {
         ACTDBG_ERROR("ReadFile: %s does not existent.",fpath)
-        return 0;
+        return -1;
     }
 
     memset(rBuf, 0, sizeof(rBuf));
@@ -66,16 +83,19 @@ int CReadf::ReadFile()
 int CReadf::Packet(char *rBuf, int rLen)
 {
     PDATA_PACKET_HEADER pHeader;
+    pHeader=(struct tag_DataPacketHeader *)malloc(sizeof(struct tag_DataPacketHeader));
 
     if((rBuf == NULL) || (rLen <=0))
     {
         ACTDBG_ERROR("Readf: Packet Invalid Parameters.")
         return -1;
     }
-    pHeader->iPayloadSize = sizeof(rBuf);
+    pHeader->iPayloadSize = sizeof(*rBuf);
     pHeader->iSerial = m_iSerialCon++;
+    pHeader->iType = DATA_CMDTYPE_DATA;
     memcpy(&m_message[0], pHeader, 40);
     memcpy(&m_message[40], rBuf, sizeof(*rBuf));
+    free(pHeader);
 
     return 0;
 }
