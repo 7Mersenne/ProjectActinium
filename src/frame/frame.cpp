@@ -5,6 +5,14 @@
 #include "../include/debug.h"
 #include "../include/node.h"
 #include "../include/config.h"
+#include "../include/PacketMachine.h"
+
+PROCITEM g_sProcList_f[] = 
+{
+    {DATA_CMDTYPE_DATA,&CActFrame::HandleData, 0},
+    {DATA_CMDTYPE_CONFIG, &CActFrame::AppConfig, 0},
+    {0}
+};
 
 CActFrame::CActFrame()
 {
@@ -15,8 +23,9 @@ CActFrame::CActFrame()
         m_iClientPort[i] = 0;
         m_iClientIp[i] = 0;
     }
-    m_iClientCon = 0;
-    m_iServerPort = 0;
+    m_iNodesNum_row = -1;
+    m_iNodesNum_col = -1;
+    m_iNodetype = 0;
 }
 
 CActFrame::~CActFrame()
@@ -35,7 +44,7 @@ int CActFrame::InitFrame()
     ACTDBG_ERROR("InitFrame: error.");
     ACTDBG_FATAL("InitFrame: fatal.");
 
-
+/*
     memset(strTemp, 0 , sizeof(strTemp));
     if(g_cConfig.GetConfigItem(ACTFRM_NODEPATHNAME, FRAME_MODNAME, strTemp) == 0)
     {
@@ -51,7 +60,9 @@ int CActFrame::InitFrame()
     {
         ACTDBG_WARNING("InitFrame: Cannot find NodePathName config.")
     }
-
+*/ 
+    InitCmds();
+    m_cManager.InitProcs();
     m_cManager.Start(ACTMAN_MANAGERIP, ACTMAN_MANAGERPORT);
 
 
@@ -165,10 +176,11 @@ int CActFrame::Run()
     }
     m_iState = ACTFRM_STATE_RUN;
 
-    if(m_cManager.OnConnect() == 0)
+    if(m_cManager.OnConnect(0) == 0)
     {
         int status;
         int *pstatus = &status;
+        char istate[12];
         ACTDBG_INFO("Frame: Send status to Manager.")
         PDATA_PACKET_HEADER pHeader;
         pHeader=(struct tag_DataPacketHeader *)malloc(sizeof(struct tag_DataPacketHeader));
@@ -179,70 +191,34 @@ int CActFrame::Run()
 
         //////////////////////////////
 
-        if(m_iServerPort >0 )
+        if(m_iNodetype >0 )
         {
             ACTDBG_INFO("Frame: Node have configed,start configuration.")
-            status = 1;
-            ACTDBG_INFO("Frame: status = %d.",*pstatus)
-            PacketData(pHeader, pstatus, sizeof(status));
-            CInterface *pClientPort = new CInterface[m_iClientCon-1];
-    
-            char *IP = 0;
-            for(int i=1; i<=m_iClientCon; i++)
-            {
-                struct in_addr inAddr;
-                inAddr.s_addr = m_iClientIp[i];
-                IP = inet_ntoa(inAddr);        
-                if(pClientPort[i-1].Start(IP,m_iClientPort[i]) == 0)
-                {
-                    ACTDBG_INFO("Frame Client:%d started.",m_iClientPort[i])
-                }
-                else 
-                {
-                    ACTDBG_ERROR("Frame Client:%d start fail.",m_iClientPort[i])
-                    return -1;
-                }
-            }
-
-            if(m_cNode.Start(m_iServerPort) == 0)
-            {
-                ACTDBG_INFO("Frame Server:%d started.",m_iServerPort)
-            }
-            else 
-            {
-                ACTDBG_ERROR("Frame Server:%d start fail.",m_iServerPort)
-                return -1;
-            }
+            status = m_iNodetype;
+            memcpy(&istate[0], pstatus, 4);
+            status = m_iNodesNum_row;
+            memcpy(&istate[4], pstatus, 4);
+            status = m_iNodesNum_col;
+            memcpy(&istate[8], pstatus, 4);
+            ACTDBG_INFO("Frame: NodeNum= %d%d, Type= %d.",m_iNodesNum_row,m_iNodesNum_col,m_iNodetype)
+            PacketData(pHeader, istate, 12); 
         }
         else
         {
-            status = 0;
-            ACTDBG_INFO("Frame:status=%d ,Send status to Manager.",*pstatus)
-            PacketData(pHeader, pstatus, sizeof(status));
+            ACTDBG_INFO("Frame: Node have not configed.Send status to Manager.")
+            status = m_iNodetype;
+            memcpy(&istate[0], pstatus, 4);
+            PacketData(pHeader, istate, 12);
         }
         free(pHeader);
     }
     else 
     {
-        ACTDBG_WARNING("Frame Client:%d unconnected.",m_iServerPort)
-        ACTDBG_INFO("%d will reconnect in 2s.",m_iServerPort);
+        ACTDBG_WARNING("Frame Client:%d unconnected.",ACTMAN_MANAGERPORT)
+        ACTDBG_INFO("%d will reconnect in 1s.",ACTMAN_MANAGERPORT);
 		sleep(1);
 		Run();
     }
-/*    if(pthread_create(&m_MainThread, NULL, ThreadFunc, this))
-    {
-        ACTDBG_FATAL("Create MainThread fail, exit!")
-        m_iState = ACTFRM_STATE_IDLE;
-        return -1;
-    }
-    ACTDBG_DEBUG("Frame counter start.")
-    for(i=0; i<10; i++)
-    {
-        ACTDBG_DEBUG("Main counter: %d", i)
-        sleep(1);
-    }
-    ACTDBG_DEBUG("Frame counter stop.")
-*/
 
     while(m_iState != ACTFRM_STATE_IDLE)
     {
@@ -300,7 +276,7 @@ int CActFrame::OnCmdExit(PCOMMAND pCmd, char *strRet, void *pContext)
     return 0;
 }
 
-int CActFrame::PacketData(void *pHeader, int *Data, int dLen)
+int CActFrame::PacketData(void *pHeader, char *Data, int dLen)
 {
     unsigned char message[ACTTCPCLI_MAXDATALEN];
     if((Data == NULL) || (dLen <=0) || (dLen > (ACTTCPCLI_MAXDATALEN - 40)))
@@ -308,10 +284,10 @@ int CActFrame::PacketData(void *pHeader, int *Data, int dLen)
         ACTDBG_ERROR("Frame: Packet Invalid Parameters.")
         return -1;
     }
-    ACTDBG_INFO("PacketData:%d",*Data)
+    ACTDBG_INFO("PacketData:%s",Data)
     memcpy(&message[0], pHeader, 40);
-    memcpy(&message[40], Data, sizeof(*Data));
-    m_cManager.Sendmess(message, sizeof(message));
+    memcpy(&message[40], Data, dLen);
+    m_cManager.Sendmess(message, sizeof(message), 0);
     return 0;
 }
 
@@ -322,66 +298,82 @@ int CActFrame::AppConfig(unsigned char *&pPacket, unsigned char *&pQuery, void *
     return pThis->onAppConfig(pPacket, pQuery);
 }
 
+
 int CActFrame::onAppConfig(unsigned char *&pPacket, unsigned char *&pQuery)
 {
-    if(*(int *)(pPacket) != DATA_PACKETSYNC)
+    char node_path[CONFIGITEM_DATALEN];
+
+    memset(node_path, 0 , sizeof(node_path));
+    m_iNodesNum_row = *(int *)(pPacket + 40);
+    m_iNodesNum_col = *(int *)(pPacket + 44);
+    m_iNodetype = *(int *)(pPacket + 48);
+    switch(m_iNodetype)
     {
-        ACTDBG_ERROR("Frame: AppConfig Invalid Parameters.")
+        case NODETYPE_READF:
+        ACTDBG_INFO("Node type:%s",READF_PATH)
+        ACTDBG_INFO("Node :%d %d",m_iNodesNum_row,m_iNodesNum_col)
+        memcpy(node_path, READF_PATH, sizeof(READF_PATH));
+        break;
+
+        case NODETYPE_FOUNCTIONAL:
+        ACTDBG_INFO("Node type:%s",FOUNCTIONAL_PATH)
+        ACTDBG_INFO("Node :%d %d",m_iNodesNum_row,m_iNodesNum_col)
+        memcpy(node_path, FOUNCTIONAL_PATH, sizeof(FOUNCTIONAL_PATH));
+        break;
+
+        case NODETYPE_FORWARD:
+        ACTDBG_INFO("Node type:%s",FORWARD_PATH)
+        ACTDBG_INFO("Node :%d %d",m_iNodesNum_row,m_iNodesNum_col)
+        memcpy(node_path, FORWARD_PATH, sizeof(FORWARD_PATH));
+        break;
+
+        case NODETYPE_WRITEF:
+        ACTDBG_INFO("Node type:%s",WRITEF_PATH)
+        ACTDBG_INFO("Node :%d %d",m_iNodesNum_row,m_iNodesNum_col)
+        memcpy(node_path, WRITEF_PATH, sizeof(WRITEF_PATH));
+        break;
+
+        default:
+        ACTDBG_ERROR("NO such Nodetype:%d",m_iNodetype)
+        m_iNodesNum_row = -1;
+        m_iNodesNum_col = -1;
+        delete pPacket;
         return -1;
     }
-    m_iNodetype = *(int *)(pPacket + 40);
-    m_iClientCon = *(int *)(pPacket + 44);
-    int *pData = reinterpret_cast<int*>(pPacket+48);
-
-    pClientPort = new CInterface [m_iClientCon-1];
-    
-    
-    char *IP = 0;
-    for(int i=0; i<m_iClientCon; i++)
+    if(AttachNode(node_path))
     {
-        m_iClientPort[i] = *(int *)(pData);
-        pData = pData + 4;
-
-        m_iClientIp[i] = *(int *)(pData);
-        pData = pData + 4;
-
-        struct in_addr inAddr;
-        inAddr.s_addr = m_iClientIp[i];
-        IP = inet_ntoa(inAddr);        
-        if(pClientPort[i].Start(IP,m_iClientPort[i]) == 0)
-        {
-            ACTDBG_INFO("Frame Client:%d started.",m_iClientPort[i])
-        }
-        else 
-        {
-            ACTDBG_ERROR("Frame Client:%d start fail.",m_iClientPort[i])
-            return -1;
-        }
-    }
-
-    m_iServerPort = *(int *)(pData);
-    if(m_cNode.Start(m_iServerPort) == 0)
-    {
-        ACTDBG_INFO("Frame Server:%d started.",m_iServerPort)
-    }
-    else 
-    {
-        ACTDBG_ERROR("Frame Server:%d start fail.",m_iServerPort)
+        ACTDBG_WARNING("InitFrame: AttachNode <%s> failed.", node_path)
+        m_iNodesNum_row = -1;
+        m_iNodesNum_col = -1;
+        DetachNode();
         return -1;
-    }
+    } 
 
+    m_pNode->Init(pPacket);
     return 0;
 }
 
-int CActFrame::HandleDate(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext, int iConn)
+int CActFrame::HandleData(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext, int iConn)
 {
     if(!pContext) return -1;
     CActFrame *pThis = (CActFrame *)pContext;
-    return pThis->onHandleDate(pPacket, pQuery);
+    return pThis->onHandleData(pPacket, pQuery);
 }
 
-int CActFrame::onHandleDate(unsigned char *&pPacket, unsigned char *&pQuery)
+int CActFrame::onHandleData(unsigned char *&pPacket, unsigned char *&pQuery)
 {
-    pClientPort[0].Sendmess(pPacket,sizeof(*pPacket));
+    m_pNode->HandleData(pPacket);
+    return 0;
+}
+
+int CActFrame::InitCmds()
+{
+    int j=0;
+    while(g_sProcList_f[j].iCmdType)
+    {
+        g_sProcList_f[j].pContext = this;
+        m_cManager.Addprocs(&g_sProcList_f[j]);
+        j++;
+    }
     return 0;
 }

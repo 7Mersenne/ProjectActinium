@@ -4,31 +4,34 @@
 [Main]
     Type=Node
 [ActFrame]
-    NodePathName=libs/libnode_in.so
+    NodePathName=libs/forward.so
     CtrlIP=127.0.0.1
     CtrlPort=8404
 [ActMan]
     m_iNodesLoc_row=1
     m_iNodesLoc_col=4
 [00NodeConfig]
-    m_iNodeType=1
-    m_iClientCon=1
-    1m_iClientPort=8406
-    1m_iClientIp=127.0.0.1
+    m_iNodeType=4
+    m_iServerPort=8408
 [01NodeConfig]
-    m_iNodeType=2
-    m_iClientCon=1
-    1m_iClientPort=8407
-    1m_iClientIp=127.0.0.1
-    m_iServerPort=8406
-[02NodeConfig]
     m_iNodeType=3
     m_iClientCon=1
+    1m_iClientdirection=4
     1m_iClientPort=8408
     1m_iClientIp=127.0.0.1
     m_iServerPort=8407
+[02NodeConfig]
+    m_iNodeType=2
+    m_iClientCon=1
+    1m_iClientdirection=4
+    1m_iClientPort=8407
+    1m_iClientIp=127.0.0.1
+    m_iServerPort=8406
 [03NodeConfig]
-    m_iNodeType=4
-    m_iServerPort=8408
+    m_iNodeType=1
+    m_iClientCon=1
+    1m_iClientdirection=4
+    1m_iClientPort=8406
+    1m_iClientIp=127.0.0.1
 
 

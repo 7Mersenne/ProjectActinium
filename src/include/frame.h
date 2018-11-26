@@ -11,6 +11,7 @@
 #include "interface.h"
 #include "nodescenter.h"
 #include "define.h"
+#include "PacketMachine.h"
 
 #define FRAME_MODNAME "ActFrame"
 
@@ -45,6 +46,7 @@ public:
     int Run();
     int Pause(int iGo);
     int Stop();
+    int InitCmds();
 
     static void *ThreadFunc(void *arg);
     void *MainThread();
@@ -52,13 +54,13 @@ public:
 
     static int OnCmdExit(PCOMMAND pCmd, char *strRet, void *pContext);
 
-    int PacketData(void *pHeader, int *Data, int dLen);
+    int PacketData(void *pHeader, char *Data, int dLen);
     //Packing and sending
 
     static int AppConfig(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext, int iConn);
     int onAppConfig(unsigned char *&pPacket, unsigned char *&pQuery);
-    static int HandleDate(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext, int iConn);
-    int onHandleDate(unsigned char *&pPacket, unsigned char *&pQuery);
+    static int HandleData(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext, int iConn);
+    int onHandleData(unsigned char *&pPacket, unsigned char *&pQuery);
 
 
 
@@ -67,11 +69,11 @@ protected:
     CInterface m_cManager;           //Client
     CNodesCenter m_cNode;            //Server 
     CInterface *pClientPort;
+    CPackMach fra_prolists;
+    int m_iNodesNum_row;
+    int m_iNodesNum_col;
     int m_iClientPort[ACTFRM_MAXCPORT];
     int m_iClientIp[ACTFRM_MAXCPORT];
-    int m_iClientCon;                //Number of Client ports in configuration information
-//    PDATA_PACKET_HEADER pHeader;
-    int m_iServerPort;
     int m_iNodetype;
 
     int m_iState;

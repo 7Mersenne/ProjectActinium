@@ -20,6 +20,13 @@ CMDITEM g_sCmdList[] =
     {0}
 };
 
+PROCITEM g_sProcList_m[] = 
+{
+    {DATA_CMDTYPE_NODESTATE, &CActMan::NodeConfig, 0},
+    {DATA_CMDTYPE_NODEREST, &CActMan::ResetNodeState, 0},
+    {0}
+};
+
 CActMan::CActMan()
 {
     m_iUsersPort = ACTMAN_DEFUSERPORT;
@@ -27,6 +34,7 @@ CActMan::CActMan()
     m_iState = ACTMAN_STATE_IDLE;
     m_iNodesLoc_row = 0;
     m_iNodesLoc_col = 0;
+    m_iListSize = PACKMACH_PROCLIST_INITSIZE;
 }
 
 CActMan::~CActMan()
@@ -103,6 +111,14 @@ int CActMan::InitCmds()
         m_cUsersCenter.AddCmd(&g_sCmdList[i]);
         i++;
     }
+    int j=0;
+    while(g_sProcList_m[j].iCmdType)
+    {
+        g_sProcList_m[j].pContext = this;
+        m_cNodesCenter.Addprocs(&g_sProcList_m[j]);
+        j++;
+    }
+
     return 0;
 }
 
@@ -220,7 +236,8 @@ int CActMan::NodeConfig(unsigned char *&pPacket, unsigned char *&pQuery, void *p
 }
 
 int CActMan::onNodeConfig(unsigned char *&pPacket, unsigned char *&pQuery, int iConn)
-{
+{   
+    int temp_row,temp_col;
     char strTemp[CONFIGITEM_DATALEN];
     PDATA_PACKET_HEADER pHeader;
     pHeader = (tag_DataPacketHeader *)pPacket;
@@ -230,10 +247,22 @@ int CActMan::onNodeConfig(unsigned char *&pPacket, unsigned char *&pQuery, int i
         return -1;
     }
     int *pData = reinterpret_cast<int*>(pPacket + 40);
-    if(*pData == 1)
+    if(*pData > 0)
     {
-        ACTDBG_WARNING("Manager: Node %d existing configuration",pHeader->iConn)
-        return 0;
+        for(int m=1; m<5; m++)
+        {
+            if(*pData == m)
+            {
+                int i,j;
+                i = *(int *)(pPacket + 44);
+                j = *(int *)(pPacket + 48);
+                Nodes_state[i][j] = *pData;
+                ACTDBG_WARNING("Manager: Node %d%d existing configuration",i,j)
+                return 0;
+            }
+        }
+        ACTDBG_ERROR("Manager: No such NodeType!")
+        return -1;
     }
     else if(*pData == 0)
     {
@@ -248,21 +277,26 @@ int CActMan::onNodeConfig(unsigned char *&pPacket, unsigned char *&pQuery, int i
                 {
                     iNodeConfig= new char[sizeof(ACTMAN_NODECONFIG) + sizeof(l) + sizeof(k)];
                     sprintf(iNodeConfig, "%d%d%s", l, k, ACTMAN_NODECONFIG);
+                    temp_row = l;
+                    temp_col = k;
                     l = m_iNodesLoc_row;
                     k = m_iNodesLoc_col;
                 }
             }
         }
         int Portnum = 0;
+        int *pPortnum = &Portnum;
         int Nodeport = 0;
         int *Node = &Nodeport;
         int NodeType = 0;
         int *pNodeType = &NodeType;
         unsigned char mess[ACTMAN_BUFSIZE];
         int j=0;
+        ACTDBG_INFO("manager read config:%s",iNodeConfig)
         if(g_cConfig.GetConfigItem(ACTMAN_NODETYPE, iNodeConfig, strTemp) == 0)
         {
             NodeType = atoi(strTemp);
+            ACTDBG_INFO("manager read config: %d",NodeType)
             memcpy(&mess[j],pNodeType,sizeof(NodeType));
             j = j + sizeof(NodeType);
         }
@@ -270,48 +304,81 @@ int CActMan::onNodeConfig(unsigned char *&pPacket, unsigned char *&pQuery, int i
         {
             Portnum = atoi(strTemp);
             ACTDBG_INFO("Portnum:%d",Portnum)
+            memcpy(&mess[j],pPortnum,sizeof(Portnum));
+            j = j + sizeof(Portnum);
         }
         
         for(int i=1; i<=Portnum; i++)
         {
+            char *PortDir= new char[sizeof(ACTMAN_NODEDIRECTION) + sizeof(i)];
+            sprintf(PortDir, "%d%s", i, ACTMAN_NODEDIRECTION);
+            
+            if(g_cConfig.GetConfigItem(PortDir, iNodeConfig, strTemp) == 0)
+            {
+                Nodeport = atoi(strTemp);
+                ACTDBG_INFO("manager read config: %d",*Node)
+            }
+    
+            delete PortDir;
+            memcpy(&mess[j],Node,sizeof(Nodeport));
+            j = j + sizeof(Nodeport);
+
+
             char *Portname= new char[sizeof(ACTMAN_NODEPORT) + sizeof(i)];
             sprintf(Portname, "%d%s", i, ACTMAN_NODEPORT);
             
             if(g_cConfig.GetConfigItem(Portname, iNodeConfig, strTemp) == 0)
             {
                 Nodeport = atoi(strTemp);
+                ACTDBG_INFO("manager read config: %d",*Node)
             }
+            delete Portname;
             memcpy(&mess[j],Node,sizeof(Nodeport));
             j = j + sizeof(Nodeport);
             
-            int dwAddr;
-            int *pdwAddr = &dwAddr;
+            unsigned long dwAddr;
+            unsigned long *pdwAddr = &dwAddr;
             char *Ipname= new char[sizeof(ACTMAN_NODEIP) + sizeof(i)];
             sprintf(Ipname, "%d%s", i, ACTMAN_NODEIP);
             if(g_cConfig.GetConfigItem(Ipname, iNodeConfig, strTemp) == 0)
             {
                 dwAddr = inet_addr(strTemp);
+                ACTDBG_INFO("manager read config:%s,%ld",strTemp,dwAddr)
                 memcpy(&mess[j],pdwAddr,sizeof(dwAddr));
                 j = j + sizeof(dwAddr);
             }
-            delete Portname;
             delete Ipname;
         }
         if(g_cConfig.GetConfigItem(ACTMAN_NODESERVERPORT, iNodeConfig, strTemp) == 0)
         {
             Nodeport = atoi(strTemp);
+            ACTDBG_INFO("manager read config: %d",Nodeport)
+            memcpy(&mess[j],Node,sizeof(Nodeport));
+            j = j + sizeof(Nodeport);
         }
-        memcpy(&mess[j],Node,sizeof(Nodeport));
+
 
         unsigned char message[ACTMAN_BUFSIZE];
+
+        pHeader->iSync = DATA_PACKETSYNC;
+        pHeader->iFrom = m_iNodesPort;
+        pHeader->iTo = iConn;
+        pHeader->iConn = iConn;
+        pHeader->iType = DATA_CMDTYPE_CONFIG;
         memcpy(&message[0], pHeader, 40);
-        memcpy(&message[40], mess, sizeof(*mess));
+        Portnum = l;
+        memcpy(&message[40], pPortnum, 4);
+        Portnum = k;
+        ACTDBG_INFO("manager Node_loc: %d %d",temp_row ,temp_col)
+        memcpy(&message[44], pPortnum, 4);
+        memcpy(&message[48], mess, j);
 
         if(m_cNodesCenter.Send(iConn,message, sizeof(message)) == 0)
         {
-            ACTDBG_INFO("Manager send config to node %d successfull.",pHeader->iConn)
-            Nodes_state[l][k] = NodeType;
-            Nodes_count[l][k] = iConn;
+            ACTDBG_INFO("Manager send config to node %d<%s> successfull.",pHeader->iConn,message)
+            Nodes_state[temp_row][temp_col] = NodeType;
+            Nodes_count[temp_row][temp_col] = iConn;
+            ACTDBG_INFO("Manager config node Nodes_state=%d,Nodes_count=%d",Nodes_state[temp_row][temp_col],Nodes_count[temp_row][temp_col])
         }
         else 
         {

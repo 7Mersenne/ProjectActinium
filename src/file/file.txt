@@ -1,0 +1,47 @@
+Frame:
+运行之后首先连接manager的Node端口，连接完成后向其发送一个状态信息；√
+    1表示已有配置，0表示未配置√
+
+Manager根据frame的状态信息，若未配置则向其发送配置信息；
+    配置信息包括：Node类型、Client接口数量m_iClientCon、Client接口的端口号m_iClientPort、IP地址（暂定）、Server 端口号√
+
+接收到配置信息后、根据配置信息创建Client、Server端口信息，然后启动Interface√、NodeCenter的Client、Server端口；√
+若不需要配置信息，发送状态之后启动Interface、NodeCenter的Client、Server端口√；
+
+读取文件Node：
+启动后获取配置信息后建立Client端口，读取文件。。√
+发送给目标节点。√
+
+配置信息数据格式：manager 发送给frame的配置信息格式为，四个字节int  NodeType四个字节 int Client端口数量、四个字节 int 第一个端口的端口号、四个字节 int 第一个端口IP地址、第二个端口号、第二个IP地址……最后为本Node Server的端口号√
+File output node配置信息数据格式：manager 发送给frame的配置信息格式为，四个字节int  NodeType四个字节本Node Server的端口号
+
+11.13.2018  
+Node 类型：Functional node、Forwarding node、File input node、File output node
+Manager记录已启动的节点以及他们的类型，配置信息中加入节点类型，
+不同类型的节点不同的功能，
+1、File input node： 读取文件并发送到Forwarding node，
+2、Forwarding node：转发数据
+3、Functional node：收到的数据经处理发送到下一Forwarding node，然后发送给File output node
+4、File output node：将接收到的数据写入文件
+
+11.14.2018
+Manager记录已启动的节点信息：√
+几行几列、
+iNodesLoc_row√
+iNodesLoc_col√
+
+读取配置文件后新建二维节点状态数组Nodes_state[iNodesLoc_row][ iNodesLoc_col],-1为未配置，大于零为已配置，其值1、2、3、4为已配置节点的节点类型√
+节点号数组Nodes_count [iNodesLoc_row][ iNodesLoc_col],其值为此位置节点连接到manager后的编号√
+当节点断开时 Nodescenter  onDisconnected函数调用manager的RestNodeState函数重置 断开节点对应的以上两数组中的相应值√
+
+
+11.15.2018
+Frame根据配置信息中Nodetype的值启动Readf、writef或node的配置程序
+Readf：启动后获取配置信息后建立Client端口，读取文件。发送给目标节点。√
+Writef：建立Server端口，将接收到的数据写入文件。
+Node：处理数据，转发数据
+
+11.23.2018
+将Frame中的配置程序转移到新建的founctinal 和forwarding  Node中，连同readf、writef放入node文件夹 实现四种node
+配置信息中加入client端口类型（前后左右上下等，，）
+Founctional_node中建立三个数组 端口号ip、client端口类型

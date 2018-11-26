@@ -39,6 +39,7 @@ public:
     ~CNodesCenter();
 
     int InitNodesCenter();
+    int Addprocs(PPROCITEM pProc);
     int InitProcs();
     int ProcessData(int iConn, unsigned char *pBuf, int iLen);
     int OnConnected(int iConn);
@@ -56,9 +57,11 @@ protected:
     int m_iBufSize[ACTTCPSVR_MAXCONN];
     int m_iBytesInBuf[ACTTCPSVR_MAXCONN];
     int m_iFlag[ACTTCPSVR_MAXCONN];
+    PPROCITEM m_pNodesCenterPList;
 
     PSEAT m_pSeats;
     int m_iSeats;
+    int m_iNodesPCnt;
 
 private:
     int m_iModID;

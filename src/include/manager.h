@@ -9,6 +9,8 @@
 #include "console.h"
 #include "nodescenter.h"
 #include "node.h"
+#include "define.h"
+#include "PacketMachine.h"
 
 #define MANAGER_MODNAME "ActMan"
 
@@ -19,6 +21,7 @@
 #define ACTMAN_NODEPORTNUM "m_iClientCon"
 #define ACTMAN_NODEPORT "m_iClientPort"
 #define ACTMAN_NODEIP "m_iClientIp"
+#define ACTMAN_NODEDIRECTION "m_iClientdirection"
 #define ACTMAN_NODESERVERPORT "m_iServerPort"
 #define ACTMAN_NODESROWNUM "m_iNodesLoc_row"
 #define ACTMAN_NODESCOLNUM "m_iNodesLoc_col"
@@ -32,6 +35,7 @@
 #define ACTMAN_STATE_RUN  1
 #define ACTMAN_STATE_STOP 2
 
+    
 class CActMan
 {
 public:
@@ -56,6 +60,8 @@ public:
     int onNodeConfig(unsigned char *&pPacket, unsigned char *&pQuery, int iConn);
     static int ResetNodeState(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext, int iConn);
     int onResetNodeState(unsigned char *&pPacket, unsigned char *&pQuery, int iConn);
+
+    
 protected:
 
     CNodesCenter m_cNodesCenter;
@@ -68,14 +74,13 @@ protected:
     int m_iNodesLoc_col;
     int** Nodes_state;
     int** Nodes_count;
+    int m_iListSize;
 
     int m_iState;
 
 private:
     int m_iModID;
 };
-
-
 
 
 

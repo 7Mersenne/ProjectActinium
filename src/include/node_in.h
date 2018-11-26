@@ -11,9 +11,10 @@ public:
     CActNodeIn();
     ~CActNodeIn();
 
-    int Init();
+    int Init(unsigned char *&pPacket);
     int OneStep();
     int Reset();
+    int HandleData(unsigned char *&pPacket);
     int Config(char *strConfig);
 
 private:

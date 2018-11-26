@@ -13,11 +13,14 @@ extern int errno;
 
 CTCPClient::CTCPClient()
 {
-	m_Port = 0;
-	m_Ip = 0;
-	m_socket_fd = -1;
-	m_SendThread = 0;
-	m_State = 0;
+	for(int i=0; i<ACTTCPCLI_MAXCONN; i++)
+	{
+		m_socket_fd[i] = -1;
+		m_Port[i] = 0;
+		m_Ip[i] = 0;
+		m_State[i] = 0;
+		m_SendThread[i] = 0;
+	}
 	m_iModID = g_cDebug.AddModule(TCPCLIENT_MODNAME);
 }
 
@@ -27,58 +30,82 @@ CTCPClient::~CTCPClient()
 }
 
 int CTCPClient::Start(char* mip, int mport)
-{
-	if(m_socket_fd >= 0)
+{   int i=0;
+	for(i=0; i<ACTTCPCLI_MAXCONN; i++)
+	{
+		if(m_Port[i] == mport)
+		{
+			ACTDBG_ERROR("Client Start: Client(%d) started",mport)
+			return -1;
+		}
+	}
+	for(i=0; i<ACTTCPCLI_MAXCONN; i++)
+	{
+		if(m_socket_fd[i] == -1)
+		{
+			m_Port[i] = mport;
+	        m_Ip[i] = mip;
+			break;
+		}
+	}
+/*	if(m_socket_fd >= 0)
 	{
 		ACTDBG_WARNING("Start: Client(%d) started, stop now.", m_Port)
 			Stop();
 	}
-    m_Port = mport;
-	m_Ip = mip;
+*/
+//    m_Port = mport;
+//	m_Ip = mip;
 
-	if((m_socket_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+	if((m_socket_fd[i] = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{
-		ACTDBG_ERROR("Start:Client(%d)Socket create fail.", m_Port)
+		ACTDBG_ERROR("Start:Client(%d) NO.%d Socket create fail.", m_Port[i],i)
 			return -1;
 	}
 
-	if(m_SendThread)
+	if(m_SendThread[i])
 	{
 		ACTDBG_WARNING("Start:Send Thread is Runing,do nothing here.")
 			return 0;
 	}
-	if (pthread_create(&m_SendThread, NULL, ConnectFunc, this))
+	struct tag_tcpconnect *Client;
+    Client=(struct tag_tcpconnect *)malloc(sizeof(struct tag_tcpconnect));
+	Client->pTh = this;
+	Client->iConn = i;
+	if (pthread_create(&m_SendThread[i], NULL, ConnectFunc, (void*)Client))
 	{
-		ACTDBG_ERROR("Create ConnectThread fail!")
-		m_SendThread = 0;
+		ACTDBG_ERROR("Create ConnectThread %d fail!",i)
+		m_SendThread[i] = 0;
 		return -1;
 	}
 
-	ACTDBG_INFO("Start: SendThread started successfully.")
+	ACTDBG_INFO("Start: SendThread %d started successfully.",i)
 	
 		return 0;
 }
 
-int CTCPClient::Stop()
+int CTCPClient::Stop(int iConn)
 {
-	m_State = 0;
-	pthread_join(m_SendThread, NULL);
-	if (m_socket_fd > 0)
-		close(m_socket_fd);
+	m_State[iConn] = 0;
+	pthread_join(m_SendThread[iConn], NULL);
+	if (m_socket_fd[iConn] > 0)
+		close(m_socket_fd[iConn]);
 	return 0;
 }
 
 void *CTCPClient::ConnectFunc(void *arg)
 {
-	class CTCPClient *pThis = (class CTCPClient *)arg;
-	pThis->ClientConnect();
+	struct tag_tcpconnect *temp;
+    temp = (struct tag_tcpconnect *)arg;
+	class CTCPClient *pThis = (class CTCPClient *)(temp->pTh);
+	pThis->ClientConnect(temp->iConn);
 	return NULL;
 }
 
-void *CTCPClient::ClientConnect()
-{   int j,iRv;
+void *CTCPClient::ClientConnect(int iConn)
+{   int iRv;
 //    m_State = 1;
-	if( (m_socket_fd = socket(AF_INET,SOCK_STREAM,0)) < 0 ) 
+	if( (m_socket_fd[iConn] = socket(AF_INET,SOCK_STREAM,0)) < 0 ) 
 	{
         ACTDBG_ERROR("create socket error: %s(errno:%d))",strerror(errno),errno)
         return NULL; 
@@ -86,26 +113,26 @@ void *CTCPClient::ClientConnect()
  
     memset(&server_addr,0,sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(m_Port);
+    server_addr.sin_port = htons(m_Port[iConn]);
  
-    if( inet_pton(AF_INET,m_Ip,&server_addr.sin_addr) <=0 ) 
+    if( inet_pton(AF_INET,m_Ip[iConn],&server_addr.sin_addr) <=0 ) 
 	{
-        ACTDBG_ERROR("inet_pton error for %s",m_Ip)
+        ACTDBG_ERROR("inet_pton error for %s",m_Ip[iConn])
         return NULL;       
     }
  
-    if( connect(m_socket_fd,(struct sockaddr*)&server_addr,sizeof(server_addr))<0) 
+    if( connect(m_socket_fd[iConn],(struct sockaddr*)&server_addr,sizeof(server_addr))<0) 
 	{
         ACTDBG_ERROR("Clientconnect error: %s(errno: %d)",strerror(errno),errno)
-		ACTDBG_INFO("%d will reconnect in 2s.",m_Port);
-		m_State = 0;
+		ACTDBG_INFO("%d will reconnect in 2s.",m_Port[iConn]);
+		m_State[iConn] = 0;
 		sleep(2);
-		ClientConnect();
+		ClientConnect(iConn);
 //        return NULL;        
     }
 
-	ACTDBG_INFO("ClientThread: ClientConnected<%d>.", m_Port);
-	m_State = 1;
+	ACTDBG_INFO("ClientThread: ClientConnected<%d>.", m_Port[iConn]);
+	m_State[iConn] = 1;
 
 	fd_set fsRead;
 	int iFdMax=0;
@@ -113,37 +140,37 @@ void *CTCPClient::ClientConnect()
     tvTimeOut.tv_sec = ACTTCPCLI_TIMEOUT_US / 1000000L;
     tvTimeOut.tv_usec = ACTTCPCLI_TIMEOUT_US % 1000000L;
 
-	while(m_State)
+	while(m_State[iConn])
 	{
 		iFdMax = 0;
 		FD_ZERO(&fsRead);
-		FD_SET(m_socket_fd, &fsRead);
-		iFdMax = m_socket_fd;
-		m_State = 1;
+		FD_SET(m_socket_fd[iConn], &fsRead);
+		iFdMax = m_socket_fd[iConn];
+		m_State[iConn] = 1;
 
 	    iRv = select(iFdMax+1, &fsRead,NULL, NULL, &tvTimeOut);
 		if(iRv == -1)
 		{
 			ACTDBG_ERROR("CilentThread: Select Error<%s>.", strerror(errno));
-			m_State = 0;
+			m_State[iConn] = 0;
 			return NULL;
 		}
 
         unsigned char rebuf[ACTTCPCLI_MAXDATALEN] = {0};
 //		FD_ISSET(m_socket_fd,&fsRead);
-	    iRv = recv(m_socket_fd,rebuf,sizeof(rebuf),0);
+	    iRv = recv(m_socket_fd[iConn],rebuf,sizeof(rebuf),0);
 		if(iRv > 0)
 		{
-		    ACTDBG_DEBUG("ClientThread: Recv <%d> [%s]",j,(char *)rebuf)
-			processData(rebuf, iRv);
+		    ACTDBG_DEBUG("ClientThread: Recv <%d> [%s]",m_Port[iConn],(char *)rebuf)
+			processData(m_Port[iConn],rebuf, iRv);
 		}
 		if(iRv == 0)
 		{
-			ACTDBG_WARNING("Client: Connection <%d> closed.", m_Port)
-			m_State = 0;
-			ACTDBG_INFO("%d will reconnect in 2s.",m_Port);
+			ACTDBG_WARNING("Client: Connection <%d> closed.", m_Port[iConn])
+			m_State[iConn] = 0;
+			ACTDBG_INFO("%d will reconnect in 2s.",m_Port[iConn]);
 		    sleep(2);
-	     	ClientConnect();
+	     	ClientConnect(iConn);
 		}
 		
 	}
@@ -151,7 +178,7 @@ void *CTCPClient::ClientConnect()
 	return 0;
 }
 
-int CTCPClient::processData(unsigned char *rebuf, int ilen)
+int CTCPClient::processData(int iConn, unsigned char *rebuf, int ilen)
 {
 	if((rebuf == NULL) || ilen >ACTTCPCLI_MAXDATALEN)
 	{
@@ -162,7 +189,7 @@ int CTCPClient::processData(unsigned char *rebuf, int ilen)
 	return 0;
 }
 
-int CTCPClient::Sendmess(unsigned char *Pbuf, int ilen)
+int CTCPClient::Sendmess(unsigned char *Pbuf, int ilen, int iConn)
 {
 	int iRv;
 
@@ -172,14 +199,14 @@ int CTCPClient::Sendmess(unsigned char *Pbuf, int ilen)
 		return -1;
 	}
 
-	if(m_socket_fd<0)
+	if(m_socket_fd[iConn]<0)
 	{
-		ACTDBG_ERROR("Client send: Bad Connection %d.", m_Port)
+		ACTDBG_ERROR("Client send: Bad Connection %d.", m_Port[iConn])
 		return -1;
 	}
     if(ilen > 0)
 	{
-		iRv = send(m_socket_fd,Pbuf,ilen,0);
+		iRv = send(m_socket_fd[iConn],Pbuf,ilen,0);
 		if(iRv <= 0)
 		{
 			ACTDBG_ERROR("Client send: error<%s>.", strerror(errno))
@@ -190,8 +217,8 @@ int CTCPClient::Sendmess(unsigned char *Pbuf, int ilen)
 	return 0;
 }
 
-int CTCPClient::OnConnect()
+int CTCPClient::OnConnect(int iConn)
 {
-	if(m_State == 1) return 0;
+	if(m_State[iConn] == 1) return 0;
 	else return -1;
 }

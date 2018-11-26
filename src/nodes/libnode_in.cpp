@@ -29,9 +29,9 @@ CActNodeIn::~CActNodeIn()
     
 }
 
-int CActNodeIn::Init()
+int CActNodeIn::Init(unsigned char *&pPacket)
 {
-    ACTDBG_INFO("I'm NodeIn.\n")
+    ACTDBG_INFO("I'm NodeIn Init.\n")
     return 0;
 }
 
@@ -47,3 +47,8 @@ int CActNodeIn::Reset()
     return 0;
 }
 
+int CActNodeIn::HandleData(unsigned char *&pPacket)
+{
+    ACTDBG_INFO("I'm NodeIn HandleData.\n")
+    return 0;
+}

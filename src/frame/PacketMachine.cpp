@@ -18,6 +18,7 @@ CPackMach::CPackMach()
     memset(m_pProcList, 0, PACKMACH_PROCLIST_INITSIZE * sizeof(PROCITEM));
     m_iListSize = PACKMACH_PROCLIST_INITSIZE;
     m_iProcCnt = 0;
+    m_iModID = g_cDebug.AddModule(PACKMACH_MODNAME);
 }
 
 CPackMach::~CPackMach()
@@ -90,7 +91,7 @@ int CPackMach::ProcessPacket(unsigned char *pPacket, unsigned char *pQuery)
     for(i=0; i<m_iListSize; i++)
     {
         if(m_pProcList[i].iCmdType != pHeader->iType) continue;
-        (*m_pProcList[i].pFunc)(pPacket, pQuery, (void *)this, pHeader->iConn);
+        (*m_pProcList[i].pFunc)(pPacket, pQuery, m_pProcList[i].pContext, pHeader->iConn);
         iProcessed++;
         if(pPacket == NULL) break;
     }
@@ -98,7 +99,7 @@ int CPackMach::ProcessPacket(unsigned char *pPacket, unsigned char *pQuery)
     if(pQuery) delete pQuery;
     if(iProcessed == 0)
     {
-        ACTDBG_ERROR("ProcessPacket: no proc founded for cmdtype<%d>", pHeader)
+        ACTDBG_ERROR("ProcessPacket: no proc founded for cmdtype<%d>", pHeader->iType)
         return -1;
     }
     ACTDBG_DEBUG("ProcessPracket: %d done.")

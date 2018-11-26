@@ -39,9 +39,10 @@ public:
     ~CInterface();
 
     int InitInterface();
+    int Addprocs(PPROCITEM pProc);
     int InitProcs();
-    int ProcessData(int iConn, unsigned char *pBuf, int iLen);
-    int OnConnected();
+    int processData(int iConn, unsigned char *pBuf, int iLen);
+    int OnConnected(int iConn);
 
     int MakeBuf(int iNeed);
     int InitTopo();
@@ -57,9 +58,11 @@ protected:
     int m_iBufSize;
     int m_iBytesInBuf;
     int m_iFlag;
+    PPROCITEM m_pInterfacePList;
 
     PSEATINTER m_pSeats;
     int m_iSeats;
+    int m_iIterPCnt;
 
 private:
     int m_iModID;

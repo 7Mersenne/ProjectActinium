@@ -13,7 +13,6 @@ PROCITEM g_sInterProcList[] =
 {
     {DATA_CMDTYPE_CONREPLY, &CInterface::ProcConReply, 0},
     {DATA_CMDTYPE_CONCMD, &CInterface::ProcConCmd, 0},
-    {DATA_CMDTYPE_CONFIG, &CActFrame::AppConfig, 0},
     {0}
 };
 
@@ -24,6 +23,8 @@ CInterface::CInterface():CTCPClient(),CPackMach()
     m_iBufSize = 0;
     m_iBytesInBuf = 0;
     m_iFlag = 0;
+    m_iIterPCnt = 0;
+    m_pInterfacePList = new PROCITEM[PACKMACH_PROCLIST_INITSIZE];
 }
 
 CInterface::~CInterface()
@@ -73,11 +74,11 @@ int CInterface::MakeBuf(int iNeed)
     return 0;
 }
 
-int CInterface::ProcessData(int iConn, unsigned char *pBuf, int iLen)
+int CInterface::processData(int iConn, unsigned char *pBuf, int iLen)
 {
     int i;
 
-    if((pBuf == NULL) || (iLen <=0) || (iConn<0) || (iConn>=ACTTCPSVR_MAXCONN))
+    if((pBuf == NULL) || (iLen <=0) || (iConn<0))
     {
         ACTDBG_ERROR("ProcessData: Invalid Parameters.")
         return -1;
@@ -91,7 +92,7 @@ int CInterface::ProcessData(int iConn, unsigned char *pBuf, int iLen)
     {
         if(*(int *)(pBuf + i) == DATA_PACKETSYNC)
         {   
-            ACTDBG_INFO("NodesCenter:ProcessData find header sync word") 
+            ACTDBG_INFO("Interface:ProcessData find header sync word") 
             iCur = 1;
             break;
         }
@@ -101,19 +102,19 @@ int CInterface::ProcessData(int iConn, unsigned char *pBuf, int iLen)
             iCopy = iLen-i;
             MakeBuf(iCopy);
             memcpy(m_pucPacketBuf, pBuf+i, iCopy);
-            ACTDBG_DEBUG("NodesCenter:ProcessData [%s]",(char *)m_pucPacketBuf)
+            ACTDBG_DEBUG("Interface:ProcessData [%s]",(char *)m_pucPacketBuf)
             HandlePacket(m_pucPacketBuf,iConn);
             m_iBytesInBuf = 0;
         }
         else 
         {
-            ACTDBG_ERROR("NodesCenter:ProcessData loss sync.")
+            ACTDBG_ERROR("Interface:ProcessData loss sync.")
             return -1;
         }
     return 0;
 }
 
-int CInterface::OnConnected()
+int CInterface::OnConnected(int iConn)
 {
     return 0;
 }
@@ -225,5 +226,35 @@ int CInterface::InitProcs()
         AddProc(&g_sInterProcList[i]);
         i++;
     }
+    int j=0;
+    
+    while(m_pInterfacePList[j].iCmdType)
+    {
+        AddProc(&m_pInterfacePList[j]);
+        j++;
+    }
     return 0;
+}
+
+int CInterface::Addprocs(PPROCITEM pProc)
+{
+    int i;
+    for(i=0; i<m_iListSize; i++)
+    {
+        if((m_pInterfacePList[i].iCmdType == pProc->iCmdType) && (m_pInterfacePList[i].pFunc == pProc->pFunc))
+        {
+            ACTDBG_WARNING("Interface AddProc: duplicate proc<%d:%p>", pProc->iCmdType, pProc->pFunc)
+            return 0;
+        }
+    }
+    for(i=0; i<m_iListSize; i++)
+    {
+        if(m_pInterfacePList[i].iCmdType == 0)
+        {
+            ACTDBG_INFO("Interface AddProc: proc<%d> added.", pProc->iCmdType)
+            memcpy(&m_pInterfacePList[i], pProc, sizeof(PROCITEM));
+            m_iIterPCnt ++;
+            return 0;
+        }
+    }
 }

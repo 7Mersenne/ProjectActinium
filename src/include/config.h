@@ -7,7 +7,7 @@
 
 #define CONFIGITEM_NAMELEN 32
 #define CONFIGITEM_DATALEN 128
-#define CONFIGITEM_MAXGROUP 16
+#define CONFIGITEM_MAXGROUP 32
 #define CONFIGITEM_MAXITEM 32
 
 typedef struct tag_ConfigItem

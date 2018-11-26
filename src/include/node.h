@@ -25,9 +25,10 @@ public:
     CActNode();
 
     int GetInfo(ACTNODEINFO &sINfo);
-    virtual int Init()=0;
+    virtual int Init(unsigned char *&pPacket)=0;
     virtual int OneStep()=0;
     virtual int Reset()=0;
+    virtual int HandleData(unsigned char *&pPacket)=0;
     
 
 protected:

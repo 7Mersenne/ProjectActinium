@@ -32,7 +32,7 @@ typedef struct tag_DataPacketHeader
 #define DATA_CMDTYPE_CONFIG 5    //configuration information from the manager
 #define DATA_CMDTYPE_NODESTATE 6 //Node's state from frame to manager
 #define DATA_CMDTYPE_NODEREST 7  //rest Manager's Node_state
-#define DATA_CMDTYPE_DATA 8 //Date
+#define DATA_CMDTYPE_DATA 8 //Data
 // append new command type here
 
 #define DATA_CONCMD_SETSTATE 1 // set_state command
@@ -119,6 +119,23 @@ typedef struct tag_Payload_ConCmd
         // add param struct for new command here
     };
 }PAYLOAD_CONCMD, *PPAYLOAD_CONCMD;
+
+#define CONNECTDEST_UP 1
+#define CONNECTDEST_DOWN 2
+#define CONNECTDEST_LEFT 3
+#define CONNECTDEST_RIGHT 4
+//Node's client port connection Direction
+
+#define NODETYPE_READF 1
+#define NODETYPE_FOUNCTIONAL 2
+#define NODETYPE_FORWARD 3
+#define NODETYPE_WRITEF 4
+
+#define READF_PATH "libs/readf.so"
+#define WRITEF_PATH "libs/writef.so"
+#define FORWARD_PATH "libs/forward.so"
+#define FOUNCTIONAL_PATH "libs/founctional.so"
+
 
 
 #endif

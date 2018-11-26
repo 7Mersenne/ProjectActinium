@@ -13,9 +13,6 @@
 PROCITEM g_sProcList[] = 
 {
     {DATA_CMDTYPE_CONREPLY, &CNodesCenter::ProcConReply, 0},
-    {DATA_CMDTYPE_NODESTATE, &CActMan::NodeConfig, 0},
-    {DATA_CMDTYPE_NODEREST, &CActMan::ResetNodeState, 0},
-    {DATA_CMDTYPE_DATA,&CActFrame::HandleDate, 0},
     {0}
 };
 
@@ -26,6 +23,8 @@ CNodesCenter::CNodesCenter():CTCPServer(), CPackMach()
     memset(m_iBufSize, 0, sizeof(m_iBufSize));
     memset(m_iBytesInBuf, 0, sizeof(m_iBytesInBuf));
     memset(m_iFlag, 0, sizeof(m_iFlag));
+    m_pNodesCenterPList = new PROCITEM[PACKMACH_PROCLIST_INITSIZE];
+    m_iNodesPCnt = 0;
 }
 
 CNodesCenter::~CNodesCenter()
@@ -299,6 +298,14 @@ int CNodesCenter::InitProcs()
         AddProc(&g_sProcList[i]);
         i++;
     }
+    int j=0;
+    
+    while(m_pNodesCenterPList[j].iCmdType)
+    {
+        AddProc(&m_pNodesCenterPList[j]);
+        j++;
+    }
+
     return 0;
 }
 
@@ -319,4 +326,27 @@ int CNodesCenter::OnDisconnected(int iConn)
         break;
     }
     return 0;
+}
+
+int CNodesCenter::Addprocs(PPROCITEM pProc)
+{
+    int i;
+    for(i=0; i<m_iListSize; i++)
+    {
+        if((m_pNodesCenterPList[i].iCmdType == pProc->iCmdType) && (m_pNodesCenterPList[i].pFunc == pProc->pFunc))
+        {
+            ACTDBG_WARNING("AddProc: duplicate proc<%d:%p>", pProc->iCmdType, pProc->pFunc)
+            return 0;
+        }
+    }
+    for(i=0; i<m_iListSize; i++)
+    {
+        if(m_pNodesCenterPList[i].iCmdType == 0)
+        {
+            ACTDBG_INFO("NodesCenter AddProc: proc<%d> added.", pProc->iCmdType)
+            memcpy(&m_pNodesCenterPList[i], pProc, sizeof(PROCITEM));
+            m_iNodesPCnt ++;
+            return 0;
+        }
+    }
 }

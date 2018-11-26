@@ -3,18 +3,25 @@
 
 #include "TCPServer.h"
 #include "define.h"
-
+#include "PacketMachine.h"
+#include "../include/node.h"
+extern "C"{
 #define WRITEF_MODNAME "Writef"
 
-class CWritef :public CTCPServer
+class CWritef :public CActNode ,public CTCPServer ,public CPackMach 
 {
 public:
     CWritef();
     ~CWritef();
 
-    int InitWritef(unsigned char *pPacket);
+    int Init(unsigned char *&pPacket);
+    int OneStep();
+    int Reset();
+    int HandleData(unsigned char *&pPacket);
     int WriteFile(unsigned char *pBuf);
     int ProcessData(int iConn, unsigned char *pBuf, int iLen);
+    int OnConnected(int iConn);
+    int OnDisconnected(int iConn);
 
 protected:
     int m_iServerPort;
@@ -25,4 +32,8 @@ private:
 
 };
 
+class CActNode *ActNewNode();
+
+int ActDeleteNode(class CActNode *pNode);
+}
 #endif

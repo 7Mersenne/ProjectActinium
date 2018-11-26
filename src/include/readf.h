@@ -3,21 +3,25 @@
 
 #include "TCPClient.h"
 #include "define.h"
+#include "../include/node.h"
 
 extern "C"{
 #define READF_MODNAME "Readf"
 #define READF_READMAXLEN (ACTTCPCLI_MAXDATALEN-40)
 
 
-class CReadf :public CTCPClient
+class CReadf :public CTCPClient,public CActNode
 {
 public:
     CReadf();
     ~CReadf();
-
-    int InitReadf(unsigned char *pPacket);
+    int Init(unsigned char *&pPacket);
+    int OneStep();
+    int Reset();
+    int HandleData(unsigned char *&pPacket);
     int ReadFile();
     int Packet(char *rBuf, int rLen);
+    int processData();
 
 private:
     unsigned char m_message[ACTTCPCLI_MAXDATALEN];
@@ -29,6 +33,10 @@ private:
 protected:
     int m_iModID;
 };
+
+class CActNode *ActNewNode();
+
+int ActDeleteNode(class CActNode *pNode);
 
 }
 #endif 
