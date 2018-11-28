@@ -20,6 +20,8 @@ CTCPClient::CTCPClient()
 		m_Ip[i] = 0;
 		m_State[i] = 0;
 		m_SendThread[i] = 0;
+		m_RunState[i] = 0;
+		m_TellMan[i] = 0;
 	}
 	m_iModID = g_cDebug.AddModule(TCPCLIENT_MODNAME);
 }
@@ -81,7 +83,7 @@ int CTCPClient::Start(char* mip, int mport)
 
 	ACTDBG_INFO("Start: SendThread %d started successfully.",i)
 	
-		return 0;
+	return 0;
 }
 
 int CTCPClient::Stop(int iConn)
@@ -121,18 +123,17 @@ void *CTCPClient::ClientConnect(int iConn)
         return NULL;       
     }
  
-    if( connect(m_socket_fd[iConn],(struct sockaddr*)&server_addr,sizeof(server_addr))<0) 
+    while(connect(m_socket_fd[iConn],(struct sockaddr*)&server_addr,sizeof(server_addr))<0) 
 	{
         ACTDBG_ERROR("Clientconnect error: %s(errno: %d)",strerror(errno),errno)
 		ACTDBG_INFO("%d will reconnect in 2s.",m_Port[iConn]);
-		m_State[iConn] = 0;
-		sleep(2);
-		ClientConnect(iConn);
-//        return NULL;        
+		sleep(2);       
     }
+	OnConnect(iConn);
 
 	ACTDBG_INFO("ClientThread: ClientConnected<%d>.", m_Port[iConn]);
 	m_State[iConn] = 1;
+	m_RunState[iConn] = 1;
 
 	fd_set fsRead;
 	int iFdMax=0;
@@ -166,11 +167,34 @@ void *CTCPClient::ClientConnect(int iConn)
 		}
 		if(iRv == 0)
 		{
-			ACTDBG_WARNING("Client: Connection <%d> closed.", m_Port[iConn])
-			m_State[iConn] = 0;
-			ACTDBG_INFO("%d will reconnect in 2s.",m_Port[iConn]);
-		    sleep(2);
-	     	ClientConnect(iConn);
+			if( (m_socket_fd[iConn] = socket(AF_INET,SOCK_STREAM,0)) < 0 ) 
+		    {
+       	       ACTDBG_ERROR("create socket error: %s(errno:%d))",strerror(errno),errno)
+       	       return NULL; 
+   	        }
+		    m_RunState[iConn] = 0;
+            memset(&server_addr,0,sizeof(server_addr));
+            server_addr.sin_family = AF_INET;
+            server_addr.sin_port = htons(m_Port[iConn]);
+ 
+            if( inet_pton(AF_INET,m_Ip[iConn],&server_addr.sin_addr) <=0 ) 
+    	    {
+                ACTDBG_ERROR("inet_pton error for %s",m_Ip[iConn])
+                return NULL;       
+            }
+      
+            while(!m_RunState[iConn]) 
+	        {
+				if(connect(m_socket_fd[iConn],(struct sockaddr*)&server_addr,sizeof(server_addr))>=0)
+				{
+					m_RunState[iConn] = 1;
+					OnConnect(iConn);
+					break;
+				}
+                ACTDBG_ERROR("Clientconnect error: %s(errno: %d)",strerror(errno),errno)
+	        	ACTDBG_INFO("%d will reconnect in 2s.",m_Port[iConn]);
+	        	sleep(2);       
+            }
 		}
 		
 	}

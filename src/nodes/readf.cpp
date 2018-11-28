@@ -1,7 +1,10 @@
 #include <stdio.h>  
 #include <stdlib.h>  
 #include <unistd.h>  
-#include <fcntl.h>  
+#include <fcntl.h> 
+#include <iostream>
+#include <fstream>
+#include <cassert> 
 #include <string.h>  
 #include <sys/types.h>  
 #include <sys/stat.h> 
@@ -68,14 +71,20 @@ int CReadf::Init(unsigned char *&pPacket)
 
 int CReadf::ReadFile()
 {
-    if(OnConnect(0) == 0)
+    while(1)
     {
-        ACTDBG_INFO("ReadFile: Open file..")
+        if(m_RunState[0] == 0)
+        {
+        sleep(1);
+        ACTDBG_INFO("ReadFile: Waiting...")
+        continue;
+        }
+        ACTDBG_INFO("ReadFile: Open file.. m_RunState:%d",m_RunState[0])
 
         FILE *fp;
         char rBuf[READF_READMAXLEN];
 
-        if((fp = fopen(fpath,"r")) == NULL)
+        if((fp = fopen(fpath,"rb")) == NULL)
         {
             ACTDBG_ERROR("ReadFile: %s does not existent.",fpath)
             return -1;
@@ -83,9 +92,18 @@ int CReadf::ReadFile()
 
         memset(rBuf, 0, sizeof(rBuf));
         ACTDBG_INFO("ReadFile: Read and send file..")
+        
+        int iRv = 0;
         while(!feof(fp))
         {
-            fread(rBuf, 1, sizeof(rBuf), fp);
+            iRv = fread(rBuf, 1, sizeof(rBuf), fp);
+            if(iRv < READF_READMAXLEN)
+            {
+                for(int i=iRv; i<READF_READMAXLEN; i++)
+                {
+                    rBuf[i] = 0;
+                }
+            }
             Packet(rBuf, sizeof(rBuf));
             if(Sendmess(m_message,sizeof(m_message),0) == -1)
             {
@@ -95,12 +113,6 @@ int CReadf::ReadFile()
             sleep(1);
         }
         ACTDBG_INFO("ReadFile: Read and send file completed")
-        return 0;
-    }
-    else 
-    {
-//        sleep(1);
-        ReadFile();
         return 0;
     }
 }

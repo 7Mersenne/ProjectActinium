@@ -42,7 +42,7 @@ public:
     int Addprocs(PPROCITEM pProc);
     int InitProcs();
     int processData(int iConn, unsigned char *pBuf, int iLen);
-    int OnConnected(int iConn);
+    int OnConnect(int iConn);
 
     int MakeBuf(int iNeed);
     int InitTopo();

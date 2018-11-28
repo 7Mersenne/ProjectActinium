@@ -37,7 +37,9 @@ public:
 	virtual int processData(int iConn, unsigned char *pbuf, int ilen);
 	int Sendmess(unsigned char *pbuf, int ilen, int iConn);
 
-	int OnConnect(int iConn);
+	virtual int OnConnect(int iConn);
+	int m_RunState[ACTTCPCLI_MAXCONN];
+	int m_TellMan[ACTTCPCLI_MAXCONN];
 
 private:
 	int m_socket_fd[ACTTCPCLI_MAXCONN];

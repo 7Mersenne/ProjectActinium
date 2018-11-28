@@ -135,6 +135,7 @@ typedef struct tag_Payload_ConCmd
 #define WRITEF_PATH "libs/writef.so"
 #define FORWARD_PATH "libs/forward.so"
 #define FOUNCTIONAL_PATH "libs/founctional.so"
+#define NODEPATHNAME "NodePath"
 
 
 

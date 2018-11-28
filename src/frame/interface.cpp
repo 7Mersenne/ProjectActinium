@@ -114,8 +114,9 @@ int CInterface::processData(int iConn, unsigned char *pBuf, int iLen)
     return 0;
 }
 
-int CInterface::OnConnected(int iConn)
+int CInterface::OnConnect(int iConn)
 {
+    m_TellMan[iConn] = 1;
     return 0;
 }
 

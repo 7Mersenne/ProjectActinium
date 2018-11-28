@@ -175,54 +175,47 @@ int CActFrame::Run()
         Stop();
     }
     m_iState = ACTFRM_STATE_RUN;
-
-    if(m_cManager.OnConnect(0) == 0)
+ 
+    while(m_iState != ACTFRM_STATE_IDLE)
     {
-        int status;
-        int *pstatus = &status;
-        char istate[12];
-        ACTDBG_INFO("Frame: Send status to Manager.")
-        PDATA_PACKET_HEADER pHeader;
-        pHeader=(struct tag_DataPacketHeader *)malloc(sizeof(struct tag_DataPacketHeader));
-        //Setting up packet header////
-        pHeader->iType = DATA_CMDTYPE_NODESTATE;
-        pHeader->iConn = ACTMAN_MANAGERPORT;
-        pHeader->iSync = DATA_PACKETSYNC;
+//    ACTDBG_DEBUG("Run: <%d>", m_iState)
+        if(m_cManager.m_TellMan[0] == 1)
+        {
+            m_cManager.m_TellMan[0] = 0;
+            int status;
+            int *pstatus = &status;
+            char istate[12];
+            ACTDBG_INFO("Frame: Send status to Manager.")
+            PDATA_PACKET_HEADER pHeader;
+            pHeader=(struct tag_DataPacketHeader *)malloc(sizeof(struct tag_DataPacketHeader));
+            //Setting up packet header////
+            pHeader->iType = DATA_CMDTYPE_NODESTATE;
+            pHeader->iConn = ACTMAN_MANAGERPORT;
+            pHeader->iSync = DATA_PACKETSYNC;
 
         //////////////////////////////
 
-        if(m_iNodetype >0 )
-        {
-            ACTDBG_INFO("Frame: Node have configed,start configuration.")
-            status = m_iNodetype;
-            memcpy(&istate[0], pstatus, 4);
-            status = m_iNodesNum_row;
-            memcpy(&istate[4], pstatus, 4);
-            status = m_iNodesNum_col;
-            memcpy(&istate[8], pstatus, 4);
-            ACTDBG_INFO("Frame: NodeNum= %d%d, Type= %d.",m_iNodesNum_row,m_iNodesNum_col,m_iNodetype)
-            PacketData(pHeader, istate, 12); 
+            if(m_iNodetype >0)
+            {
+                ACTDBG_INFO("Frame: Node have configed.Send status to Manager.")
+                status = m_iNodetype;
+                memcpy(&istate[0], pstatus, 4);
+                status = m_iNodesNum_row;
+                memcpy(&istate[4], pstatus, 4);
+                status = m_iNodesNum_col;
+                memcpy(&istate[8], pstatus, 4);
+                ACTDBG_INFO("Frame: NodeNum= %d%d, Type= %d.",m_iNodesNum_row,m_iNodesNum_col,m_iNodetype)
+                PacketData(pHeader, istate, 12); 
+            }
+            else
+            {
+                ACTDBG_INFO("Frame: Node have not configed.Send status to Manager.")
+                status = m_iNodetype;
+                memcpy(&istate[0], pstatus, 4);
+                PacketData(pHeader, istate, 12);
+            }
+            free(pHeader);
         }
-        else
-        {
-            ACTDBG_INFO("Frame: Node have not configed.Send status to Manager.")
-            status = m_iNodetype;
-            memcpy(&istate[0], pstatus, 4);
-            PacketData(pHeader, istate, 12);
-        }
-        free(pHeader);
-    }
-    else 
-    {
-        ACTDBG_WARNING("Frame Client:%d unconnected.",ACTMAN_MANAGERPORT)
-        ACTDBG_INFO("%d will reconnect in 1s.",ACTMAN_MANAGERPORT);
-		sleep(1);
-		Run();
-    }
-
-    while(m_iState != ACTFRM_STATE_IDLE)
-    {
-//        ACTDBG_DEBUG("Run: <%d>", m_iState)
         sleep(1);
     }
     return 0;
@@ -307,39 +300,25 @@ int CActFrame::onAppConfig(unsigned char *&pPacket, unsigned char *&pQuery)
     m_iNodesNum_row = *(int *)(pPacket + 40);
     m_iNodesNum_col = *(int *)(pPacket + 44);
     m_iNodetype = *(int *)(pPacket + 48);
-    switch(m_iNodetype)
+
+    ACTDBG_INFO("Frame read m_iNodetype:%d",m_iNodetype)
+    char strTemp[CONFIGITEM_DATALEN];
+    memset(strTemp, 0 , sizeof(strTemp));
+    char *pCh_NodeType = new char[sizeof(m_iNodetype)];
+ 
+    sprintf(pCh_NodeType,"%d",m_iNodetype);
+    if(g_cConfig.GetConfigItem(pCh_NodeType, FRAME_MODNAME, strTemp) == 0)
     {
-        case NODETYPE_READF:
-        ACTDBG_INFO("Node type:%s",READF_PATH)
-        ACTDBG_INFO("Node :%d %d",m_iNodesNum_row,m_iNodesNum_col)
-        memcpy(node_path, READF_PATH, sizeof(READF_PATH));
-        break;
-
-        case NODETYPE_FOUNCTIONAL:
-        ACTDBG_INFO("Node type:%s",FOUNCTIONAL_PATH)
-        ACTDBG_INFO("Node :%d %d",m_iNodesNum_row,m_iNodesNum_col)
-        memcpy(node_path, FOUNCTIONAL_PATH, sizeof(FOUNCTIONAL_PATH));
-        break;
-
-        case NODETYPE_FORWARD:
-        ACTDBG_INFO("Node type:%s",FORWARD_PATH)
-        ACTDBG_INFO("Node :%d %d",m_iNodesNum_row,m_iNodesNum_col)
-        memcpy(node_path, FORWARD_PATH, sizeof(FORWARD_PATH));
-        break;
-
-        case NODETYPE_WRITEF:
-        ACTDBG_INFO("Node type:%s",WRITEF_PATH)
-        ACTDBG_INFO("Node :%d %d",m_iNodesNum_row,m_iNodesNum_col)
-        memcpy(node_path, WRITEF_PATH, sizeof(WRITEF_PATH));
-        break;
-
-        default:
-        ACTDBG_ERROR("NO such Nodetype:%d",m_iNodetype)
-        m_iNodesNum_row = -1;
-        m_iNodesNum_col = -1;
-        delete pPacket;
+        memcpy(node_path, strTemp, sizeof(strTemp)); 
+        ACTDBG_INFO("Frame read .so Path:%s",node_path) 
+    }
+    else
+    {
+        ACTDBG_ERROR("Frame cnt't read .so Path.")
         return -1;
     }
+    delete pCh_NodeType;
+
     if(AttachNode(node_path))
     {
         ACTDBG_WARNING("InitFrame: AttachNode <%s> failed.", node_path)

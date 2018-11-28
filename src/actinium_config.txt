@@ -7,6 +7,10 @@
     NodePathName=libs/forward.so
     CtrlIP=127.0.0.1
     CtrlPort=8404
+    4=libs/writef.so
+    3=libs/forward.so
+    2=libs/founctional.so
+    1=libs/readf.so
 [ActMan]
     m_iNodesLoc_row=1
     m_iNodesLoc_col=4
