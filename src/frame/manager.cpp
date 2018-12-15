@@ -70,31 +70,12 @@ int CActMan::InitMan()
     {
         m_iNodesLoc_col = atoi(strTemp);
     }
-    Nodes_state = new int* [m_iNodesLoc_row];
-    for(int i=0;i<m_iNodesLoc_row;i++)
-    {
-        Nodes_state[i] = new int [m_iNodesLoc_col];
-        for(int j=0;j<m_iNodesLoc_col;j++)
-        {
-            Nodes_state[i][j] = -1;
-        }
-    }
-
-    Nodes_count = new int* [m_iNodesLoc_row];
-    for(int i=0;i<m_iNodesLoc_row;i++)
-    {
-        Nodes_count[i] = new int [m_iNodesLoc_col];
-        for(int j=0;j<m_iNodesLoc_col;j++)
-        {
-            Nodes_count[i][j] = -1;
-        }
-    }
-
 
     InitCmds();
 
     // init Nodes Center
     m_cNodesCenter.Start(m_iNodesPort);
+    m_cNodesCenter.InitTopo(m_iNodesLoc_row, m_iNodesLoc_col);
     m_cNodesCenter.InitProcs();
     m_cUsersCenter.Start(m_iUsersPort);
 
@@ -241,27 +222,43 @@ int CActMan::onNodeConfig(unsigned char *&pPacket, unsigned char *&pQuery, int i
     char strTemp[CONFIGITEM_DATALEN];
     PDATA_PACKET_HEADER pHeader;
     pHeader = (tag_DataPacketHeader *)pPacket;
+    PSEAT pSeat;
     if(pHeader->iSync != DATA_PACKETSYNC)
     {
         ACTDBG_ERROR("Manager: NodeConfig Invalid request.")
+        pHeader = NULL;
+        delete pHeader;
+        pSeat = NULL;
+        delete pSeat;
         return -1;
     }
     int *pData = reinterpret_cast<int*>(pPacket + 40);
     if(*pData > 0)
     {
-        for(int m=1; m<5; m++)
+        for(int m=1; m<=NODETYPE_NUM; m++)
         {
             if(*pData == m)
             {
                 int i,j;
                 i = *(int *)(pPacket + 44);
                 j = *(int *)(pPacket + 48);
-                Nodes_state[i][j] = *pData;
+                pSeat = &m_cNodesCenter.m_pSeats[i*m_iNodesLoc_row+j];
+                pSeat->iState = NODESCENTER_SEATSTATE_OCCUPIED;
+                pSeat->sInfo.iType = *pData;
+                pSeat->sInfo.iID = iConn;
                 ACTDBG_WARNING("Manager: Node %d%d existing configuration",i,j)
+                pHeader = NULL;
+                delete pHeader;
+                pSeat = NULL;
+                delete pSeat;
                 return 0;
             }
         }
         ACTDBG_ERROR("Manager: No such NodeType!")
+        pSeat = NULL;
+        delete pSeat;
+        pHeader = NULL;
+        delete pHeader;
         return -1;
     }
     else if(*pData == 0)
@@ -273,7 +270,8 @@ int CActMan::onNodeConfig(unsigned char *&pPacket, unsigned char *&pQuery, int i
         {
             for(int k=0; k<m_iNodesLoc_col; k++)
             {
-                if(Nodes_state[l][k] == -1)
+                pSeat = &m_cNodesCenter.m_pSeats[l*m_iNodesLoc_row+k];
+                if(pSeat->iState == NODESCENTER_SEATSTATE_AVAILABLE)
                 {
                     iNodeConfig= new char[sizeof(ACTMAN_NODECONFIG) + sizeof(l) + sizeof(k)];
                     sprintf(iNodeConfig, "%d%d%s", l, k, ACTMAN_NODECONFIG);
@@ -356,7 +354,7 @@ int CActMan::onNodeConfig(unsigned char *&pPacket, unsigned char *&pQuery, int i
             memcpy(&mess[j],Node,sizeof(Nodeport));
             j = j + sizeof(Nodeport);
         }
-
+        delete iNodeConfig;
 
         unsigned char message[ACTMAN_BUFSIZE];
 
@@ -376,19 +374,29 @@ int CActMan::onNodeConfig(unsigned char *&pPacket, unsigned char *&pQuery, int i
         if(m_cNodesCenter.Send(iConn,message, sizeof(message)) == 0)
         {
             ACTDBG_INFO("Manager send config to node %d<%s> successfull.",pHeader->iConn,message)
-            Nodes_state[temp_row][temp_col] = NodeType;
-            Nodes_count[temp_row][temp_col] = iConn;
-            ACTDBG_INFO("Manager config node Nodes_state=%d,Nodes_count=%d",Nodes_state[temp_row][temp_col],Nodes_count[temp_row][temp_col])
+            pSeat = &m_cNodesCenter.m_pSeats[temp_row*m_iNodesLoc_row+temp_col];
+            pSeat->iState = NODESCENTER_SEATSTATE_OCCUPIED;
+            pSeat->sInfo.iID = iConn;
+            pSeat->sInfo.iType = NodeType;
+            ACTDBG_INFO("Manager config node Nodes_iState=%d,Nodes_iID=%d",pSeat->iState,pSeat->sInfo.iID)
+
         }
         else 
         {
             ACTDBG_ERROR("Manager send config to node %d fail.",pHeader->iConn)
+            pHeader = NULL;
+            delete pHeader;
+            pSeat = NULL;
+            delete pSeat;
             return -1;
         }
-        delete iNodeConfig;
     }
 
     else ACTDBG_ERROR("Manager: Node %d error status",pHeader->iConn)
+    pHeader = NULL;
+    delete pHeader;
+    pSeat = NULL;
+    delete pSeat;
     return 0;
 }
 
@@ -401,17 +409,23 @@ int CActMan::ResetNodeState(unsigned char *&pPacket, unsigned char *&pQuery, voi
 
 int CActMan::onResetNodeState(unsigned char *&pPacket, unsigned char *&pQuery, int iConn)
 {
+    PSEAT pSeat;
     for(int l=0; l<m_iNodesLoc_row; l++)
     {
         for(int k=0; k<m_iNodesLoc_col; k++)
         {
-            if(Nodes_state[l][k] == iConn)
+            pSeat = &m_cNodesCenter.m_pSeats[l*m_iNodesLoc_row+k];
+            if(pSeat->sInfo.iID == iConn)
             {
-                Nodes_state[l][k] = -1;
-                Nodes_count[l][k] = -1;
-                return 0;
+                pSeat->iState = NODESCENTER_SEATSTATE_AVAILABLE;
+                pSeat->sInfo.iID = -1;
+                pSeat->sInfo.iType = -1;
+                ACTDBG_WARNING("Manager: ResetNodeState %d%d",l, k)
+                ACTDBG_INFO("Manager: iState=%d,sInfo.iID=%d,sInfo.iType=%d",pSeat->iState, pSeat->sInfo.iID, pSeat->sInfo.iType)
             }
         }
     }
+    pSeat = NULL;
+    delete pSeat;
     return 0;
 }

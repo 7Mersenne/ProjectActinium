@@ -24,7 +24,10 @@ CPackMach::CPackMach()
 CPackMach::~CPackMach()
 {
     if(m_pProcList)
+    {
+        m_pProcList = NULL;
         delete m_pProcList;
+    }
 }
 
 int CPackMach::InitPackMach()
@@ -40,12 +43,18 @@ int CPackMach::HandlePacket(unsigned char *pPacket,int iConn)
     if(pPacket == NULL)
     {
         ACTDBG_WARNING("HandlePacket: null pointer.")
+        delete pQuery;
+        pHeader = NULL;
+        delete pHeader;
         return -1;
     }
 
     if(pHeader->iSync != DATA_PACKETSYNC)
     {
         ACTDBG_ERROR("HandlePacket: loss sync.")
+        delete pQuery;
+        pHeader = NULL;
+        delete pHeader;
         return -1;
     }
 
@@ -71,9 +80,16 @@ int CPackMach::HandlePacket(unsigned char *pPacket,int iConn)
         
         default:
         ACTDBG_ERROR("HandlePacket: invalid packet state <%d>, packet abandoned.", pHeader->iState)
+        pPacket = NULL;
         delete pPacket;
+        delete pQuery;
+        pHeader = NULL;
+        delete pHeader;
         return -1;
     }
+    delete pQuery;
+    pHeader = NULL;
+    delete pHeader;
     return 0;
 }
 
@@ -95,14 +111,24 @@ int CPackMach::ProcessPacket(unsigned char *pPacket, unsigned char *pQuery)
         iProcessed++;
         if(pPacket == NULL) break;
     }
-    if(pPacket) delete pPacket;
-    if(pQuery) delete pQuery;
+    if(pPacket) 
+    {
+        pPacket = NULL;
+        delete pPacket;
+    }
+    if(pQuery) 
+    {
+        pQuery = NULL;
+        delete pQuery;
+    }
     if(iProcessed == 0)
     {
         ACTDBG_ERROR("ProcessPacket: no proc founded for cmdtype<%d>", pHeader->iType)
         return -1;
     }
-    ACTDBG_DEBUG("ProcessPracket: %d done.")
+    ACTDBG_DEBUG("ProcessPracket: %d done.",pHeader->iType)
+    pHeader = NULL;
+    delete pHeader;
     return 0;
 }
 
@@ -131,6 +157,7 @@ int CPackMach::AddProc(PPROCITEM pProc)
             return -1;
         }
         memcpy(pTmp, m_pProcList, m_iListSize*sizeof(PROCITEM));
+        m_pProcList = NULL;
         delete m_pProcList;
         m_pProcList = pTmp;
         m_iListSize *= 2;
@@ -200,6 +227,7 @@ int CPackMach::AddQueue(unsigned char *pPacket)
     if(pHeader->iSync != DATA_PACKETSYNC)
     {
         ACTDBG_ERROR("AddQueue: packet loss sync.")
+        pPacket = NULL;
         delete pPacket;
         return -1;
     }
@@ -209,9 +237,11 @@ int CPackMach::AddQueue(unsigned char *pPacket)
     if(!Insert_Pair.second) 
     {
         ACTDBG_ERROR("AddQueue: duplicate detected, Insert packet<%d, %d> fail.", pHeader->iType, pHeader->iSerial)
+        pPacket = NULL;
         delete pPacket;
         return -1;
     }
+    pPacket = NULL;
     delete pPacket;
     return 0;
 }

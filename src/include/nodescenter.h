@@ -46,11 +46,11 @@ public:
     int OnDisconnected(int iConn);
 
     int MakeBuf(int iConn, int iNeed);
-    int InitTopo();
+    int InitTopo(int Row, int Col);
 
     static int ProcConReply(unsigned char *&pPacket, unsigned char *&pQuery, void *pContext, int iConn);
     int onProcConReply(unsigned char *&pPacket, unsigned char *&pQuery);
-
+    PSEAT m_pSeats;
 protected:
    
     unsigned char *m_pucPacketBuf[ACTTCPSVR_MAXCONN];
@@ -59,8 +59,10 @@ protected:
     int m_iFlag[ACTTCPSVR_MAXCONN];
     PPROCITEM m_pNodesCenterPList;
 
-    PSEAT m_pSeats;
+//    PSEAT m_pSeats;
     int m_iSeats;
+    int iCol;
+    int iRow;
     int m_iNodesPCnt;
 
 private:

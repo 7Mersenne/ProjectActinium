@@ -14,6 +14,8 @@
 [ActMan]
     m_iNodesLoc_row=1
     m_iNodesLoc_col=4
+[NodesCenter]
+    topo=2d-mesh
 [00NodeConfig]
     m_iNodeType=4
     m_iServerPort=8408
@@ -37,5 +39,3 @@
     1m_iClientdirection=4
     1m_iClientPort=8406
     1m_iClientIp=127.0.0.1
-
-

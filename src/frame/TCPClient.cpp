@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <signal.h>
 
 
 #include "../include/TCPClient.h"
@@ -32,7 +33,11 @@ CTCPClient::~CTCPClient()
 }
 
 int CTCPClient::Start(char* mip, int mport)
-{   int i=0;
+{   
+	struct sigaction sa;
+    sa.sa_handler = SIG_IGN;
+    sigaction( SIGPIPE, &sa, 0 );
+	int i=0;
 	for(i=0; i<ACTTCPCLI_MAXCONN; i++)
 	{
 		if(m_Port[i] == mport)

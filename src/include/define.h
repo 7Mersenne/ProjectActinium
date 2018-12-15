@@ -130,6 +130,7 @@ typedef struct tag_Payload_ConCmd
 #define NODETYPE_FOUNCTIONAL 2
 #define NODETYPE_FORWARD 3
 #define NODETYPE_WRITEF 4
+#define NODETYPE_NUM 4
 
 #define READF_PATH "libs/readf.so"
 #define WRITEF_PATH "libs/writef.so"

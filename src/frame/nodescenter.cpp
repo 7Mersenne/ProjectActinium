@@ -25,22 +25,28 @@ CNodesCenter::CNodesCenter():CTCPServer(), CPackMach()
     memset(m_iFlag, 0, sizeof(m_iFlag));
     m_pNodesCenterPList = new PROCITEM[PACKMACH_PROCLIST_INITSIZE];
     m_iNodesPCnt = 0;
+    m_iModID = g_cDebug.AddModule(NODESCENTER_MODNAME);
 }
 
 CNodesCenter::~CNodesCenter()
 {
-    int i;
-    for(i=0; i<ACTTCPSVR_MAXCONN; i++)
+    for(int i=0; i<ACTTCPSVR_MAXCONN; i++)
     {
-        if(m_pucPacketBuf[i]) delete m_pucPacketBuf[i];
+        if(m_pucPacketBuf[i]) 
+        {
+            m_pucPacketBuf[i] = NULL;
+            delete m_pucPacketBuf[i];
+        }
     }
+    m_pNodesCenterPList = NULL;
+    delete m_pNodesCenterPList;
 }
 
 int CNodesCenter::InitNodesCenter()
 {
     ACTDBG_INFO("Init Nodes Center.")
 
-    InitTopo();
+//    InitTopo();
 
     return 0;
 }
@@ -65,17 +71,23 @@ int CNodesCenter::MakeBuf(int iConn, int iNeed)
     {
         m_pucPacketBuf[iConn] = NULL;
     }
-    else return 0;
+    else 
+    {
+        pTmp = NULL;
+        delete pTmp;
+        return 0;
+    }
     if(m_pucPacketBuf[iConn] == NULL)
     {
         m_pucPacketBuf[iConn] = new unsigned char[iSize];
         if(pTmp)
         {
             memcpy(m_pucPacketBuf[iConn], pTmp, m_iBufSize[iConn]);
-            delete pTmp;
         }
         m_iBufSize[iConn] = iSize;
     }
+    pTmp = NULL;
+    delete pTmp;
     return 0;
 }
 
@@ -114,8 +126,12 @@ int CNodesCenter::ProcessData(int iConn, unsigned char *pBuf, int iLen)
         else 
         {
             ACTDBG_ERROR("NodesCenter:ProcessData loss sync.")
+            pHeader = NULL;
+            delete pHeader;
             return -1;
         }
+    pHeader = NULL;
+    delete pHeader;
     return 0;
 }
 
@@ -210,7 +226,7 @@ int CNodesCenter::OnConnected(int iConn)
     return 0;
 }
 
-int CNodesCenter::InitTopo()
+int CNodesCenter::InitTopo(int Row, int Col)
 {
     char strTmp[CONFIGITEM_DATALEN];
     memset(strTmp, 0, sizeof(strTmp));
@@ -219,19 +235,21 @@ int CNodesCenter::InitTopo()
     if(strcmp(strTmp, NODESCENTER_TOPO_2DMESH) == 0)
     {
         ACTDBG_INFO("InitTopo: Init <%s>.", strTmp)
-
+/*
         int iCol, iRow;
         int iInputCnt, iOutputCnt;
         g_cConfig.GetConfigItem(NODESCENTER_ITEM_COL, NODESCENTER_MODNAME, strTmp);
         iCol = atoi(strTmp);
         g_cConfig.GetConfigItem(NODESCENTER_ITEM_ROW, NODESCENTER_MODNAME, strTmp);
         iRow = atoi(strTmp);
-
-        if((iCol == 0) || (iRow == 0))
+*/
+        if((Col == 0) || (Row == 0))
         {
-            ACTDBG_ERROR("InitTopo: invalid col<%d> or row<%d>.", iCol, iRow)
+            ACTDBG_ERROR("InitTopo: invalid col<%d> or row<%d>.", Col, Row)
             return -1;
         }
+        iRow = Row;
+        iCol = Col;
 
         m_iSeats = iCol * iRow;
         m_pSeats = new SEAT[m_iSeats];
@@ -251,8 +269,8 @@ int CNodesCenter::InitTopo()
 
                 pSeat = &m_pSeats[j*iRow+i];
                 pSeat->iState = NODESCENTER_SEATSTATE_AVAILABLE;
-                pSeat->sInfo.iID = j<<16 | i;
-                pSeat->sInfo.iType = 0;
+                pSeat->sInfo.iID = -1;
+                pSeat->sInfo.iType = -1;
                 pSeat->sInfo.iInputCnt = 2;
                 pSeat->sInfo.iOutputCnt = 2;
                 if(i>0)pSeat->sInfo.iInput[0] = i-1;
@@ -311,20 +329,22 @@ int CNodesCenter::InitProcs()
 
 int CNodesCenter::OnDisconnected(int iConn)
 {
-    int i=0;
-    unsigned char *pPacket;
-    unsigned char *pQuery;
-    
-    while(g_sProcList[i].iCmdType)
+    ACTDBG_WARNING("NodesCenter: OnDisconnected")
+    unsigned char *pPacket = 0;
+    unsigned char *pQuery = 0;
+    for(int i=0; i<PACKMACH_PROCLIST_INITSIZE; i++)
     {
-        if(g_sProcList[i].iCmdType != DATA_CMDTYPE_NODEREST) 
+        if(m_pNodesCenterPList[i].iCmdType != DATA_CMDTYPE_NODEREST) 
         {
-            i++;
             continue;
         }
-        (*g_sProcList[i].pFunc)(pPacket, pQuery, (void *)this, iConn);
+        (*m_pNodesCenterPList[i].pFunc)(pPacket, pQuery, (void *)this, iConn);
         break;
     }
+    pPacket = NULL;
+    pQuery = NULL;
+    delete pPacket;
+    delete pQuery;
     return 0;
 }
 

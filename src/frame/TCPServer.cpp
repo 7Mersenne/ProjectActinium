@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
+#include <pthread.h>
 
 #include "../include/TCPServer.h"
 
@@ -31,6 +32,9 @@ CTCPServer::~CTCPServer()
 
 int CTCPServer::Start(int iPort)
 {
+    struct sigaction sa;
+    sa.sa_handler = SIG_IGN;
+    sigaction( SIGPIPE, &sa, 0 );
     if(m_iSocketFd >= 0)
     {
         ACTDBG_WARNING("Start: Server(%d) started, stop now.", m_iPort)
@@ -92,6 +96,8 @@ void *CTCPServer::ConnectionThreadFunc(void *arg)
     PCONN_THREAD_CONTEXT pContext = (PCONN_THREAD_CONTEXT) arg;
     class CTCPServer *pThis = (class CTCPServer *)pContext->pThis;
     pThis->ConnectionThread(pContext->iConn);
+    pContext = NULL;
+    delete pContext;
     return NULL;
 }
 
@@ -185,7 +191,7 @@ void *CTCPServer::ListenThread()
         if(m_ConnectionThread[i]>0)
             pthread_join(m_ConnectionThread[i], NULL);
     }
-    for(int i=0; i<ACTTCPSVR_MAXCONN; i++)
+    for(i=0; i<ACTTCPSVR_MAXCONN; i++)
     {
         if(m_piConnFd[i] >0)
         {
@@ -243,6 +249,7 @@ void *CTCPServer::ConnectionThread(int iConn)
     struct timeval tvTimeOut;
 
     OnConnected(iConn);
+    unsigned char pucBuf[ACTTCPSVR_MAXDATALEN] = {0};
 
     while(m_iConnState[iConn])
     {
@@ -262,7 +269,8 @@ void *CTCPServer::ConnectionThread(int iConn)
         }
         if(FD_ISSET(m_piConnFd[iConn], &fsRead))
         {
-            unsigned char pucBuf[ACTTCPSVR_MAXDATALEN] = {0};
+//            unsigned char pucBuf[ACTTCPSVR_MAXDATALEN] = {0};
+            memset(pucBuf, 0 ,sizeof(pucBuf));
             iRv = recv(m_piConnFd[iConn], pucBuf, sizeof(pucBuf), 0);
             ACTDBG_DEBUG("ConnectionThread: Recv <%d.%d> [%s],,,,m_piConnFd=%d", iRv, iConn, (char *)pucBuf,m_piConnFd[iConn])
             if(iRv > 0)
@@ -281,7 +289,8 @@ void *CTCPServer::ConnectionThread(int iConn)
     close(m_piConnFd[iConn]);
     m_piConnFd[iConn] = -1;
     ACTDBG_INFO("ConnectionThread exit.");
-    return NULL;
+    pthread_join(m_ConnectionThread[iConn], NULL);
+    return 0;
 }
 
 int CTCPServer::ProcessData(int iConn, unsigned char *pBuf, int iLen)

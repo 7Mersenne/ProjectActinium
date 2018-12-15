@@ -51,11 +51,7 @@ int CActForward::Init(unsigned char *&pPacket)
     m_iClientCon = *(int *)(pPacket + con);
     con = con + 4;
 
-    //pClientPort = new CInterface [m_iClientCon-1];//bug
-    
-    //terminate called after throwing an instance of 'std::bad_alloc'
-    //what():  std::bad_alloc
-    //Aborted (core dumped)
+
     
      
     

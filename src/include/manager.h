@@ -72,8 +72,8 @@ protected:
 
     int m_iNodesLoc_row;
     int m_iNodesLoc_col;
-    int** Nodes_state;
-    int** Nodes_count;
+//    int** Nodes_state;
+//    int** Nodes_count;
     int m_iListSize;
 
     int m_iState;
